@@ -1,5 +1,4 @@
 import libtcodpy as libtcod
-from spells import Spells
 
 __author__ = 'Steven'
 
@@ -25,8 +24,10 @@ class BasicMonster:
 
 
 class ConfusedMonster:
+    #Constants
+    CONFUSE_NUM_TURNS = 10
     #AI for a temporarily confused monster (reverts to previous AI after a while)
-    def __init__(self, old_ai, num_turns=Spells.CONFUSE_NUM_TURNS):
+    def __init__(self, old_ai, num_turns=CONFUSE_NUM_TURNS):
         self.old_ai = old_ai
         self.num_turns = num_turns
 

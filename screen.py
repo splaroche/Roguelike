@@ -1,7 +1,5 @@
 import textwrap
-from baseCharacter import Base_Character
 import libtcodpy as libtcod
-from menu import Menu
 
 __author__ = 'Steven'
 
@@ -30,7 +28,7 @@ class Screen:
     # instance var
     instance = None
 
-    def __init__(self, fov_map, fov_recompute, player, objects, map, mouse, key):
+    def __init__(self, mouse=None, key=None):
         # initialize the console
         # set the font, and consoles
         libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
@@ -45,12 +43,8 @@ class Screen:
         self.color_light_wall = libtcod.Color(130, 110, 50)
         self.color_light_ground = libtcod.Color(200, 180, 50)
 
-        self.game_msgs = []
-        self.fov_map = fov_map
-        self.fov_recompute = fov_recompute
-        self.objects = objects
-        self.player = player
-        self.map = map
+        self.fov_map = None
+        self.fov_recompute = False
 
         self.mouse = mouse
         self.key = key
@@ -63,22 +57,20 @@ class Screen:
     #########################################################################
     # Gui Section
     #########################################################################
-    @staticmethod
-    def message(new_msg, color='white'):
+    def message(self, game_msgs, new_msg, color='white'):
         lib_color = Screen.get_libtcod_color(color);
         #split the message if necessary, among multiple lines
         new_msg_lines = textwrap.wrap(new_msg, Screen.MSG_WIDTH)
 
         for line in new_msg_lines:
             #if the buffer is full, remove the first line to make room for the new one
-            if len(Screen.game_msgs) == Screen.MSG_HEIGHT:
-                del Screen.game_msgs[0]
+            if len(game_msgs) == Screen.MSG_HEIGHT:
+                del game_msgs[0]
 
             #add the new line as a tuple, with the text and the color
-            Screen.game_msgs.append((line, lib_color))
+            game_msgs.append((line, lib_color))
 
-    @staticmethod
-    def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
+    def render_bar(self, x, y, total_width, name, value, maximum, bar_color, back_color):
         #render a bar (HP, experience, etc). first calculate the width of the bar
         bar_width = int(float(value) / maximum * total_width)
 
@@ -96,7 +88,7 @@ class Screen:
         libtcod.console_print_ex(self.panel, x + total_width / 2, y, libtcod.BKGND_NONE, libtcod.CENTER,
                                  name + ': ' + str(value) + '/' + str(maximum))
 
-    def render_all(self):
+    def render_all(self, objects, map, dungeon_level):
 
         if self.fov_recompute:
             #recompute FOV if needed (the player moved or something)
@@ -126,10 +118,10 @@ class Screen:
                         libtcod.console_set_char_background(self.con, x, y, self.color_light_ground, libtcod.BKGND_SET)
                     map[x][y].explored = True
                     #draw all objects in the list
-        for object in self.objects:
-            if object != self.player:
+        for object in objects:
+            if object != Player.get_instance():
                 object.draw()
-            self.player.draw()
+            Player.get_instance().draw()
 
         #blit the contents of the "con" to the root console
         libtcod.console_blit(self.con, 0, 0, self.SCREEN_WIDTH, self.SCREEN_HEIGHT, 0, 0, 0)
@@ -146,7 +138,7 @@ class Screen:
             y += 1
 
         #show the player's stats
-        self.render_bar(1, 1, self.BAR_WIDTH, 'HP', self.player.fighter.hp, self.player.fighter.max_hp,
+        self.render_bar(1, 1, self.BAR_WIDTH, 'HP', Player.get_instance().hp, Player.max_hp,
                         libtcod.light_red, libtcod.darker_red)
 
         #display the dungeon level
@@ -155,19 +147,18 @@ class Screen:
 
         #display names of the objects under the mouse
         libtcod.console_set_default_background(self.panel, libtcod.light_gray)
-        libtcod.console_print_ex(self.panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, self.get_names_under_mouse())
+        libtcod.console_print_ex(self.panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, self.get_names_under_mouse(objects))
 
         #blit the contents of "panel" to the root console
         libtcod.console_blit(self.panel, 0, 0, self.SCREEN_WIDTH, self.PANEL_HEIGHT, 0, 0, self.PANEL_Y)
 
-    def get_names_under_mouse(self):
-        global mouse
+    def get_names_under_mouse(self, objects):
 
         #return a string with the names of all objects under the mouse
-        (x, y) = (mouse.cx, mouse.cy)
+        (x, y) = (self.mouse.cx, self.mouse.cy)
 
         #create a list with the names of all objects at the mouse's coordinates and in FOV
-        names = [obj.name for obj in self.objects
+        names = [obj.name for obj in objects
                  if obj.x == x and obj.y == y and libtcod.map_is_in_fov(self.fov_map, obj.x, obj.y)]
 
         names = ', '.join(names) #join the names, separated by commas
@@ -294,3 +285,77 @@ class Screen:
             'violet': libtcod.violet,
             'yellow': libtcod.yellow
         }.get(color, libtcod.white)
+
+
+    #Constants
+    #Item Menu Constants
+    INVENTORY_WIDTH = 50
+
+    def menu(self, header, options, width):
+        #check to see if there's more than 26 options
+        if len(options) > 26: raise ValueError('Cannot have a menu with more than 26 options')
+
+        #calculate the total height for the header (after auto-wrap) and one line per option
+        if header == '':
+            header_height = 0
+        else:
+            header_height = libtcod.console_get_height_rect(con, 0, 0, width, Screen.SCREEN_HEIGHT, header)
+
+        height = len(options) + header_height
+
+        #create an off-screen console that represents the menu's window
+        window = libtcod.console_new(width, height)
+
+        #print the header, with auto-wrap
+        libtcod.console_set_default_foreground(window, libtcod.white)
+        libtcod.console_print_rect_ex(window, 0, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
+
+        #print all the options
+        y = header_height
+        letter_index = ord('a')
+        for option_text in options:
+            text = '(' + chr(letter_index) + ') ' + option_text
+            libtcod.console_print_ex(window, 0, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
+            y += 1
+            letter_index += 1
+
+        #blit the contents of the 'window' to the root console
+        x = Screen.SCREEN_WIDTH / 2 - width / 2
+        y = Screen.SCREEN_HEIGHT / 2 - height / 2
+        libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
+
+        #present the root console to the player and wait for a key-press
+        libtcod.console_flush()
+        key = libtcod.console_wait_for_keypress(True)
+
+        #check if they user wants to go full screen
+        if key.vk == libtcod.KEY_ENTER and key.lalt:
+            libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+
+        #convert the ASCII code to an index; if it corresponds to an option, return it
+        index = key.c - ord('a')
+        if index >= 0 and index < len(options): return index
+        return None
+
+    
+    def inventory_menu(self, inventory, header):
+        #show a menu with each item of the inventory as an option
+        if len(inventory) == 0:
+            options = ['Inventory is empty!']
+        else:
+            options = []
+            for item in inventory:
+                text = item.name
+                #show additional information, in case it is equipped.
+                if item.equipment and item.equipment.is_equipped:
+                    text = text + ' (on ' + item.equipment.slot + ')'
+                options.append(text)
+
+        index = self.menu(header, options, Menu.INVENTORY_WIDTH)
+
+        #if an item was chosen, return it
+        if index is None or len(inventory) == 0: return None
+        return inventory[index].item
+    
+    def msgbox(self, text, width=50):
+        self.menu(text, [], width)

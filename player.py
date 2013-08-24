@@ -4,11 +4,14 @@ __author__ = 'Steven'
 
 class Player(Object):
 
-    def __init__(self, object):
+    def __init__(self, object, base_character):
         self.base_object = object
+        self.base_character = base_character
 
-    def player_move_or_attack(self, dx, dy):
-        global fov_recompute
+    def get_instance(self):
+        return self.base_object
+
+    def move_or_attack(self, dx, dy):
 
         #the coordinates the player is moving to/attacking
         x = self.x + dx
@@ -24,9 +27,10 @@ class Player(Object):
         #attack if target found, move otherwise
         if target is not None:
             player.fighter.attack(target)
+            return False
         else:
             player.move(dx, dy)
-            fov_recompute = True
+            return True
 
     @property
     def object(self):

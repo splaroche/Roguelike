@@ -8,6 +8,7 @@ import libtcodpy as libtcod
 from item import Item
 from rectangle import Rect
 from tile import Tile
+from player import Player
 __author__ = 'Steven'
 
 
@@ -23,10 +24,9 @@ class Map:
     ROOM_MIN_SIZE = 6
     MAX_ROOMS = 30
 
-    def __init__(self, player):
+    def __init__(self):
         self.map = None
         self.objects = []
-        self.player = player
         self.stairs = None
     ####################################################################################################
     # Room Creation
@@ -66,7 +66,7 @@ class Map:
     def make_map(self):
 
         #the list of objects with just the player
-        self.objects = [self.player]
+        self.objects = [Player.get_instance()]
 
         #fill map with unblocked tiles
         self.map = [[Tile(True)
@@ -103,8 +103,8 @@ class Map:
                 (new_x, new_y) = new_room.center()
 
                 if num_rooms == 0:
-                    self.player.x = new_x
-                    self.player.y = new_y
+                    Player.get_instance().x = new_x
+                    Player.get_instance().y = new_y
                 else:
                     #all rooms after the first:
                     #connect it to the previous room with a tunnel
@@ -158,6 +158,7 @@ class Map:
                     fighter_component = Base_Character(hp=20, defense=0, power=4, xp=35, death_function=monster_death)
                     ai_component = BasicMonster()
                     monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
+                        class_name=fighter_component, ai=ai_component)
                 elif choice == 'troll':
                     #create a troll
                     fighter_component = Base_Character(hp=30, defense=2, power=8, xp=100, death_function=monster_death)
@@ -215,7 +216,7 @@ class Map:
         global dungeon_level
         #advance to the next level
         Menu.message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
-        self.player.fighter.heal_self(self.player.fighter.max_hp / 2)
+        Player.get_instance().fighter.heal_self(Player.get_instance().fighter.max_hp / 2)
 
         Menu.message('After a rare moment of peace, you descend deeper into the hear of the dungeon...', libtcod.red)
         dungeon_level += 1
