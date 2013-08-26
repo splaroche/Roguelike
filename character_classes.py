@@ -1,31 +1,21 @@
-from item import Item
+from items import Item
 
 
 
-class Base_Character:
+class BaseCharacterClass:
     #Leveling Constants
     LEVEL_UP_BASE = 200
     LEVEL_UP_FACTOR = 150
     LEVEL_SCREEN_WIDTH = 40
 
     #combat-related properties and methods (monster, player, NPC).
-    def __init__(self, hp, defense, power, xp, death_function=None, equipment=None):
-        self.xp = xp
+    def __init__(self, hp, defense, power):      
         self.base_max_hp = hp
         self.hp = hp
         self.base_defense = defense
-        self.base_power = power
-        self.death_function = death_function
+        self.base_power = power        
 
-        # set the character's equipment
-        self.equipment = equipment
-        if self.equipment: # let equipment component know who owns it
-            self.equipment.owner = self
-
-            #there must be an Item component for the Equipment component to work properly
-            self.item = Item()
-            self.item.owner = self
-
+      
     @property
     def power(self):
         bonus = sum(equipment.power_bonus for equipment in self.get_all_equipped(self.owner))
@@ -71,8 +61,8 @@ class Base_Character:
             if function is not None:
                 function(self.owner)
 
-        if self.owner != self: #yield experience to the player
-            player.fighter.xp += self.xp
+         #yield experience to the player
+        Player.get_instance().xp += self.xp
 
     ##########################################################################################
     # Leveling Functions
@@ -83,10 +73,10 @@ class Base_Character:
             player = self.owner
             #see if the player's experience is enough to level-up
             level_up_xp = self.LEVEL_UP_BASE + player.level + self.LEVEL_UP_FACTOR
-            if player.fighter.xp >= level_up_xp:
+            if player.xp >= level_up_xp:
                 #it is! level up
                 player.level += 1
-                player.fighter.xp -= level_up_xp
+                player.xp -= level_up_xp
                 screen.menu('Your battle skills grow stronger! You reached level ' + str(player.level) + '!', 'yellow')
 
                 choice = None
@@ -98,12 +88,12 @@ class Base_Character:
                                        self.LEVEL_SCREEN_WIDTH)
 
                 if choice == 0:
-                    player.fighter.base_max_hp += 20
-                    player.fighter.hp += 20
+                    self.base_max_hp += 20
+                    self.hp += 20
                 elif choice == 1:
-                    player.fighter.base_power += 1
+                    self.base_power += 1
                 elif choice == 2:
-                    player.fighter.base_defense += 1
+                    self.base_defense += 1
 
     def get_equipped_in_slot(self, slot): # returns the equipment in a slot, or None if it's empty
         for obj in self.equipment:
@@ -111,11 +101,11 @@ class Base_Character:
                 return obj.equipment
         return None
 
-    def get_all_equipped(self):  #returns a list of equipped items
-        if self.name == 'player':
+    def get_all_equipped(self, owner):  #returns a list of equipped items
+        if owner.name == 'player':
             equipped_list = []
-            for item in self.equipment:
-                if item.equipment and item.equipment.is_equipped:
+            for item in owner.equipment:
+                if item.is_equipped:
                     equipped_list.append(item.equipment)
             return equipped_list
         else:

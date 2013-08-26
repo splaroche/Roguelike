@@ -1,14 +1,7 @@
-import math
-from item import Item
 import libtcodpy as libtcod
-
-__author__ = 'Steven'
-
-
 class Object:
 #this is a generic object: the player, a monster, etc
-    def __init__(self, x, y, char, name, color, blocks=False, class_name=None, ai=None, item=None, always_visible=False,
-                 equipment=None):
+    def __init__(self, x, y, char, name, color, blocks=False, always_visible=False):
         self.always_visible = always_visible
         self.name = name
         self.blocks = blocks
@@ -16,21 +9,7 @@ class Object:
         self.y = y
         self.char = char
         self.color = color
-
-        self.class_name = class_name
-        if self.class_name:
-            # let the fighter component know who owns it
-            self.class_name.owner = self
-
-        self.ai = ai
-        if self.ai:
-            # let the ai component know who owns it
-            self.ai.owner = self
-
-        self.item = item
-        if self.item:
-            self.item.owner = self
-
+        
 
 
     def distance(self, x, y):
@@ -60,8 +39,8 @@ class Object:
         dy = int(round(dy / distance))
         self.move(dx, dy)
 
-    def draw(self, fov_map, con):
-        if (libtcod.map_is_in_fov(fov_map, self.x, self.y)) or (self.always_visible and map[self.x][self.y].explored):
+    def draw(self, fov_map, con, map):
+        if (libtcod.map_is_in_fov(fov_map, self.x, self.y)) or (self.always_visible and map.map[self.x][self.y].explored):
         #set the color and then draw the character that represents the object
             libtcod.console_set_default_foreground(con, self.color)
             libtcod.console_put_char(con, self.x, self.y, self.char, libtcod.BKGND_NONE)
@@ -70,9 +49,8 @@ class Object:
         #erase the char that represents the object
         libtcod.console_put_char(con, self.x, self.y, ' ', libtcod.BKGND_NONE)
 
-    def send_to_back(self):
+    def send_to_back(self, objects):
         #make this object be drawn first, so all others appear above it if they're in the same tile
-        global objects
         objects.remove(self)
         objects.insert(0, self)
 

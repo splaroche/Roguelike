@@ -26,49 +26,52 @@ class Screen:
     CHARACTER_SCREEN_WIDTH = 30
 
     # instance var
-    instance = None
+    _instance = None
 
     def __init__(self, mouse=None, key=None):
-        # initialize the console
-        # set the font, and consoles
-        libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-        libtcod.console_init_root(self.SCREEN_WIDTH, self.SCREEN_HEIGHT, 'python/libtcod tutorial', False)
-        self.con = libtcod.console_new(self.MAP_WIDTH, self.MAP_HEIGHT)
-        self.panel = libtcod.console_new(self.SCREEN_WIDTH, self.PANEL_HEIGHT)
-        libtcod.sys_set_fps(self.LIMIT_FPS)
 
-        # create the tile colors
-        self.color_dark_wall = libtcod.Color(0, 0, 100)
-        self.color_dark_ground = libtcod.Color(50, 50, 100)
-        self.color_light_wall = libtcod.Color(130, 110, 50)
-        self.color_light_ground = libtcod.Color(200, 180, 50)
+        if self._instance is None:
+            # initialize the console
+            # set the font, and consoles
+            libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
+            libtcod.console_init_root(self.SCREEN_WIDTH, self.SCREEN_HEIGHT, 'python/libtcod tutorial', False)
+            self.con = libtcod.console_new(self.MAP_WIDTH, self.MAP_HEIGHT)
+            self.panel = libtcod.console_new(self.SCREEN_WIDTH, self.PANEL_HEIGHT)
+            libtcod.sys_set_fps(self.LIMIT_FPS)
 
-        self.fov_map = None
-        self.fov_recompute = False
+            # create the tile colors
+            self.color_dark_wall = libtcod.Color(0, 0, 100)
+            self.color_dark_ground = libtcod.Color(50, 50, 100)
+            self.color_light_wall = libtcod.Color(130, 110, 50)
+            self.color_light_ground = libtcod.Color(200, 180, 50)
 
-        self.mouse = mouse
-        self.key = key
+            self.fov_map = None
+            self.fov_recompute = False
+
+            self.mouse = mouse
+            self.key = key
+            self.game_msgs = []
+
+            self._instance = self
+
 
     def get_instance(self, screen=None):
-        if self.instance is None:
-            self.instance = screen
-        return self.instance
+        return self._instance
 
     #########################################################################
     # Gui Section
     #########################################################################
-    def message(self, game_msgs, new_msg, color='white'):
-        lib_color = Screen.get_libtcod_color(color);
+    def message(self, new_msg, color):        
         #split the message if necessary, among multiple lines
-        new_msg_lines = textwrap.wrap(new_msg, Screen.MSG_WIDTH)
+        new_msg_lines = textwrap.wrap(new_msg, self.MSG_WIDTH)
 
         for line in new_msg_lines:
             #if the buffer is full, remove the first line to make room for the new one
-            if len(game_msgs) == Screen.MSG_HEIGHT:
-                del game_msgs[0]
+            if len(self.game_msgs) == self.MSG_HEIGHT:
+                del self.game_msgs[0]
 
             #add the new line as a tuple, with the text and the color
-            game_msgs.append((line, lib_color))
+            self.game_msgs.append((line, color))
 
     def render_bar(self, x, y, total_width, name, value, maximum, bar_color, back_color):
         #render a bar (HP, experience, etc). first calculate the width of the bar
@@ -76,33 +79,34 @@ class Screen:
 
         #render the background first
         libtcod.console_set_default_background(self.panel, back_color)
-        libtcod.console_rect(self.panel, x, y, total_width, 1, False, libtcod.BKGND_self)
+        libtcod.console_rect(self.panel, x, y, total_width, 1, False, libtcod.BKGND_NONE)
 
         #now render the bar on top
         libtcod.console_set_default_background(self.panel, bar_color)
         if bar_width > 0:
-            libtcod.console_rect(self.panel, x, y, bar_width, 1, False, libtcod.BKGND_self)
+            libtcod.console_rect(self.panel, x, y, bar_width, 1, False, libtcod.BKGND_NONE)
 
         #finally, some centered text with the values
         libtcod.console_set_default_foreground(self.panel, libtcod.white)
         libtcod.console_print_ex(self.panel, x + total_width / 2, y, libtcod.BKGND_NONE, libtcod.CENTER,
                                  name + ': ' + str(value) + '/' + str(maximum))
 
-    def render_all(self, objects, map, dungeon_level):
-
+    def render_all(self, map):
+        objects = map.objects
+        player = map.player
         if self.fov_recompute:
             #recompute FOV if needed (the player moved or something)
             fov_recompute = False
-            libtcod.map_compute_fov(self.fov_map, self.player.x, self.player.y, self.TORCH_RADIUS,
-                                    self.FOV_LIGHT_WALLS, self.FOV_ALGO)
+            libtcod.map_compute_fov(self.fov_map, player.x, player.y, map.TORCH_RADIUS,
+                                    map.FOV_LIGHT_WALLS, map.FOV_ALGO)
 
         #go through all the tiles and set the background color
         for y in range(self.MAP_HEIGHT):
             for x in range(self.MAP_WIDTH):
                 visible = libtcod.map_is_in_fov(self.fov_map, x, y)
-                wall = map[x][y].block_sight
+                wall = map.map[x][y].block_sight
                 if not visible:
-                    if map[x][y].explored:
+                    if map.map[x][y].explored:
 
                     #it's out of the player's FOV
                         if wall:
@@ -116,12 +120,12 @@ class Screen:
                         libtcod.console_set_char_background(self.con, x, y, self.color_light_wall, libtcod.BKGND_SET)
                     else:
                         libtcod.console_set_char_background(self.con, x, y, self.color_light_ground, libtcod.BKGND_SET)
-                    map[x][y].explored = True
+                    map.map[x][y].explored = True
                     #draw all objects in the list
         for object in objects:
-            if object != Player.get_instance():
-                object.draw()
-            Player.get_instance().draw()
+            if object != player:
+                object.draw(self.fov_map, self.con, map)
+            player.draw(self.fov_map, self.con, map)
 
         #blit the contents of the "con" to the root console
         libtcod.console_blit(self.con, 0, 0, self.SCREEN_WIDTH, self.SCREEN_HEIGHT, 0, 0, 0)
@@ -138,12 +142,12 @@ class Screen:
             y += 1
 
         #show the player's stats
-        self.render_bar(1, 1, self.BAR_WIDTH, 'HP', Player.get_instance().hp, Player.max_hp,
+        self.render_bar(1, 1, self.BAR_WIDTH, 'HP', player.character_class.hp, player.character_class.max_hp,
                         libtcod.light_red, libtcod.darker_red)
 
         #display the dungeon level
         libtcod.console_print_ex(self.panel, 1, 3, libtcod.BKGND_NONE, libtcod.LEFT,
-                                 'Dungeon Level ' + str(dungeon_level))
+                                 'Dungeon Level ' + str(map.dungeon_level))
 
         #display names of the objects under the mouse
         libtcod.console_set_default_background(self.panel, libtcod.light_gray)
@@ -167,31 +171,31 @@ class Screen:
     #########################################################################
     # Input Section
     #########################################################################
-    def handle_keys(self):
+    def handle_keys(self, game_state, player, objects):
         key = self.key
         if key.vk == libtcod.KEY_ENTER and key.lalt:
             libtcod.console_set_fullself(not libtcod.console_is_fullself())
         elif key.vk == libtcod.KEY_ESCAPE:
             return 'exit' #exit game
 
-        if self.game_state == 'playing':
+        if game_state == 'playing':
             #movement keys
             if key.vk == libtcod.KEY_UP or key.vk == libtcod.KEY_KP8:
-                self.player.move_or_attack(0, -1)
+                player.move_or_attack(0, -1, objects)
             elif key.vk == libtcod.KEY_DOWN or key.vk == libtcod.KEY_KP2:
-                self.player.move_or_attack(0, 1)
+                player.move_or_attack(0, 1, objects)
             elif key.vk == libtcod.KEY_LEFT or key.vk == libtcod.KEY_KP4:
-                self.player.move_or_attack(-1, 0)
+                player.move_or_attack(-1, 0, objects)
             elif key.vk == libtcod.KEY_RIGHT or key.vk == libtcod.KEY_KP6:
-                self.player.move_or_attack(1, 0)
+                player.move_or_attack(1, 0, objects)
             elif key.vk == libtcod.KEY_HOME or key.vk == libtcod.KEY_KP7:
-                self.player.move_or_attack(-1, -1)
+                player.move_or_attack(-1, -1, objects)
             elif key.vk == libtcod.KEY_PAGEUP or key.vk == libtcod.KEY_KP9:
-                self.player.move_or_attack(1, -1)
+                player.move_or_attack(1, -1, objects)
             elif key.vk == libtcod.KEY_END or key.vk == libtcod.KEY_KP1:
-                self.player.move_or_attack(-1, 1)
+                player.move_or_attack(-1, 1, objects)
             elif key.vk == libtcod.KEY_PAGEDOWN or key.vk == libtcod.KEY_KP3:
-                self.player.move_or_attack(1, 1)
+                player.move_or_attack(1, 1, objects)
             elif key.vk == libtcod.KEY_KP5:
                 pass  #do nothing ie wait for the monster to come to you
             else:
@@ -234,6 +238,10 @@ class Screen:
 
                 return 'didnt-take-turn'
 
+
+    ###############################################################################
+    # Target methods
+    ###############################################################################
     def target_tile(self, max_range=None):
         #return the position of a tile left-clicked in player's FOV (optionally a range), or (None, None) if right-clicked
         key = self.key
@@ -254,16 +262,7 @@ class Screen:
                 return None, None #cancel if the player right-clicked or pressed Escape
 
 
-    def target_monster(self, max_range=None):
-        #returns a clicked monster inside FOV up to a range, or None if right-clicked
-        while True:
-            (x, y) = self.target_tile(max_range)
-            if x is None: #player cancelled
-                return None
-
-            for obj in self.objects:
-                if obj.x == x and obj.y == y and obj.fighter and obj != self.player:
-                    return obj
+    
 
 
     @staticmethod
@@ -299,7 +298,7 @@ class Screen:
         if header == '':
             header_height = 0
         else:
-            header_height = libtcod.console_get_height_rect(con, 0, 0, width, Screen.SCREEN_HEIGHT, header)
+            header_height = libtcod.console_get_height_rect(self.con, 0, 0, width, Screen.SCREEN_HEIGHT, header)
 
         height = len(options) + header_height
 

@@ -1,18 +1,9 @@
-from ai import *
-from equipment import Equipment
-from baseCharacter import Base_Character
-from menu import Menu
-from object import Object
-from screen import Screen
+import creatures, items, gui, character_classes, objects
 import libtcodpy as libtcod
-from item import Item
-from rectangle import Rect
-from tile import Tile
-from player import Player
 __author__ = 'Steven'
 
 
-class Map:
+class GameMap:
 
     # FOV Constants
     FOV_ALGO = 0 #default
@@ -28,6 +19,9 @@ class Map:
         self.map = None
         self.objects = []
         self.stairs = None
+        self.dungeon_level = 1
+        self.player = None
+        self.screen = None
     ####################################################################################################
     # Room Creation
     ####################################################################################################
@@ -63,15 +57,12 @@ class Map:
 
         return False
 
-    def make_map(self):
-
-        #the list of objects with just the player
-        self.objects = [Player.get_instance()]
-
+    def make(self):
+        
         #fill map with unblocked tiles
         self.map = [[Tile(True)
-                for y in range(Screen.MAP_HEIGHT)]
-               for x in range(Screen.MAP_WIDTH)]
+                for y in range(gui.Screen.MAP_HEIGHT)]
+               for x in range(gui.Screen.MAP_WIDTH)]
 
         #create rooms
         rooms = []
@@ -81,8 +72,8 @@ class Map:
             w = libtcod.random_get_int(0, self.ROOM_MIN_SIZE, self.ROOM_MAX_SIZE)
             h = libtcod.random_get_int(0, self.ROOM_MIN_SIZE, self.ROOM_MAX_SIZE)
             #random position without going out of the boundaries of the map
-            x = libtcod.random_get_int(0, 0, self.MAP_WIDTH - w - 1)
-            y = libtcod.random_get_int(0, 0, self.MAP_HEIGHT - h - 1)
+            x = libtcod.random_get_int(0, 0, gui.Screen.MAP_WIDTH - w - 1)
+            y = libtcod.random_get_int(0, 0, gui.Screen.MAP_HEIGHT - h - 1)
 
             new_room = Rect(x, y, w, h)
 
@@ -103,8 +94,8 @@ class Map:
                 (new_x, new_y) = new_room.center()
 
                 if num_rooms == 0:
-                    Player.get_instance().x = new_x
-                    Player.get_instance().y = new_y
+                    self.player.x = new_x
+                    self.player.y = new_y
                 else:
                     #all rooms after the first:
                     #connect it to the previous room with a tunnel
@@ -130,9 +121,9 @@ class Map:
                 num_rooms += 1
 
         #create stairs at the center of the last room
-        self.stairs = Object(new_x, new_y, '<', 'stairs', libtcod.white, always_visible=True)
+        self.stairs = objects.Object(new_x, new_y, '<', 'stairs', libtcod.white, always_visible=True)
         self.objects.append(self.stairs)
-        self.stairs.send_to_back()
+        self.stairs.send_to_back(self.objects)
 
 
     def place_objects(self, room):
@@ -155,16 +146,16 @@ class Map:
                 choice = self.random_choice(monster_chances)
                 if choice == 'orc':
                     #create an orc
-                    fighter_component = Base_Character(hp=20, defense=0, power=4, xp=35, death_function=monster_death)
-                    ai_component = BasicMonster()
-                    monster = Object(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
-                        class_name=fighter_component, ai=ai_component)
+                    fighter_component = character_classes.BaseCharacterClass(hp=20, defense=0, power=4)
+                    ai_component = creatures.BasicMonster(self.player, self.screen.fov_map)
+                    monster = creatures.Creature(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
+                        character_class=fighter_component, ai=ai_component, xp=35)
                 elif choice == 'troll':
                     #create a troll
-                    fighter_component = Base_Character(hp=30, defense=2, power=8, xp=100, death_function=monster_death)
-                    ai_component = BasicMonster()
-                    monster = Object(x, y, 'T', 'troll', libtcod.darker_green, blocks=True,
-                                     class_name=fighter_component, ai=ai_component)
+                    fighter_component = character_classes.BaseCharacterClass(hp=30, defense=2, power=8)
+                    ai_component = creatures.BasicMonster(self.player, self.screen.fov_map)
+                    monster = creatures.Creature(x, y, 'T', 'troll', libtcod.darker_green, blocks=True,
+                                     character_class=fighter_component, ai=ai_component, xp=100)
 
                 self.objects.append(monster)
 
@@ -188,38 +179,31 @@ class Map:
 
             #only place it if the tiles is not blocked
             if not self.is_blocked(x, y):
-                choice = random_choice(item_chances)
+                choice = self.random_choice(item_chances)
                 if choice == 'heal':
                     #create a healing potion
-                    item_component = Item(use_function=cast_heal)
-                    item = Object(x, y, '!', 'healing potion', libtcod.violet, item=item_component)
+                    item = items.Item(x, y, '!', 'healing potion', libtcod.violet, use_function=items.Spell.cast_heal)
                 elif choice == 'lightning':
                     #create a lightning bolt scroll
-                    item_component = Item(use_function=cast_lightning)
-                    item = Object(x, y, '#', 'scroll of lightning bolt', libtcod.dark_blue, item=item_component)
+                    item = items.Item(x, y, '#', 'scroll of lightning bolt', libtcod.dark_blue, use_function=items.Spell.cast_lightning)
                 elif choice == 'fireball':
                     #create a fireball scroll
-                    item_component = Item(use_function=cast_fireball)
-                    item = Object(x, y, '#', 'scroll of fireball', libtcod.dark_orange, item=item_component)
+                    item = items.Item(x, y, '#', 'scroll of fireball', libtcod.dark_orange, use_function=items.Spell.cast_fireball)
                 elif choice == 'confuse':
                     #create a confuse scroll
-                    item_component = Item(use_function=cast_confusion)
-                    item = Object(x, y, '#', 'scroll of confusion', libtcod.light_blue, item=item_component)
-                elif choice == 'sword':
-                    #create a sword
-                    equipment_component = Equipment(slot='right hand')
-                    item = Object(x, y, '/', 'sword', libtcod.sky, equipment=equipment_component)
+                    item = items.Item(x, y, '#', 'scroll of confusion', libtcod.light_blue, use_function=items.Spell.cast_confusion)                
+                elif choice == 'sword':                    #create a sword                    
+                    item = items.Equipment(x, y, '/', 'sword', libtcod.sky, slot='right hand')
                 self.objects.append(item)
-                item.send_to_back() # items appear below other objects
+                item.send_to_back(self.objects) # items appear below other objects
 
     def next_level(self):
-        global dungeon_level
         #advance to the next level
-        Menu.message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
-        Player.get_instance().fighter.heal_self(Player.get_instance().fighter.max_hp / 2)
+        self.screen.message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
+        creatures.Player.get_instance().fighter.heal_self(Player.get_instance().fighter.max_hp / 2)
 
-        Menu.message('After a rare moment of peace, you descend deeper into the hear of the dungeon...', libtcod.red)
-        dungeon_level += 1
+        self.screen.message('After a rare moment of peace, you descend deeper into the hear of the dungeon...', libtcod.red)
+        self.dungeon_level += 1
         self.make_map() #create a fresh level!
 
         self.initialize_fov()
@@ -227,7 +211,7 @@ class Map:
     def from_dungeon_level(self, table):
         #returns a value that depends on level.  the table specifies what value occurs after each level, default is 0
         for (value, level) in reversed(table):
-            if dungeon_level >= level:
+            if self.dungeon_level >= level:
                 return value
         return 0
 
@@ -254,3 +238,62 @@ class Map:
         strings = chances_dict.keys()
 
         return strings[self.random_choice_index(chances)]
+
+
+    
+    def initialize_fov(self):        
+
+        libtcod.console_clear(self.screen.con) #unexplored areas start black
+        self.screen.fov_recompute = True
+
+        #create the FOV map, according to the generated map
+        self.screen.fov_map = libtcod.map_new(self.screen.MAP_WIDTH, self.screen.MAP_HEIGHT)
+        for y in range(self.screen.MAP_HEIGHT):
+            for x in range(self.screen.MAP_WIDTH):
+                libtcod.map_set_properties(self.screen.fov_map, x, y, not self.map[x][y].block_sight, not self.map[x][y].blocked)
+
+
+    def target_monster(self, max_range=None):
+        #returns a clicked monster inside FOV up to a range, or None if right-clicked
+        while True:
+            (x, y) = self.screen.target_tile(max_range)
+            if x is None: #player cancelled
+                return None
+
+            for obj in self.objects:
+                if obj.x == x and obj.y == y and obj is Creature and obj != self.player:
+                    return obj
+        
+
+class Rect:
+    #a rectangle on the map. used to characterize a room.
+    def __init__(self, x, y, w, h):
+        self.x1 = x
+        self.y1 = y
+        self.x2 = x + w
+        self.y2 = y + h
+
+    def center(self):
+        center_x = (self.x1 + self.x2) / 2
+        center_y = (self.y1 + self.y2) / 2
+        return center_x, center_y
+
+    def intersect(self, other):
+        #returns true if this rectangle interests with another one
+        return (self.x1 <= other.x2 and self.x2 >= other.x1 and
+                self.y1 <= other.y2 and self.y2 >= other.y2)
+
+
+class Tile:
+    # a tile of the map
+    def __init__(self, blocked, block_sight=None):
+        self.blocked = blocked
+
+        #by default, if a tiles is blocked, it also blocks sight
+        if block_sight is None:
+            block_sight = blocked
+        self.block_sight = block_sight
+
+        self.explored = False
+
+

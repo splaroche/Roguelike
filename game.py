@@ -1,58 +1,50 @@
-from map import Map
-from screen import Screen
-from object import Object
+from map import GameMap
+from objects import Object
+from character_classes import BaseCharacterClass
+from creatures import Player, Creature
+from gui import Screen
 import libtcodpy as libtcod
+import shelve
+from character_classes import *
 class Game:
     def __init__(self):
         self.player = None
         self.player_action = None
         self.inventory = []
-        self.game_msgs = []
-        self.game_state = None
-        self.dungeon_level = None
-        self.map = Map()
+        self.game_state = None      
+        self.map = GameMap()
         self.screen = Screen()
+        self.map.screen = self.screen
     ####################################################################################################
     # Game Initialization Methods
     ####################################################################################################
     def new_game(self):
 
         #create object representing the player
-        fighter_component = Base_Character(hp=100, defense=1, power=4, xp=0, death_function=player_death)
-        player = Player(Object(0, 0, '@', 'player', libtcod.white, blocks=True, fighter=fighter_component), fighter_component)
-        o = Player.get_instance()
-        print o.name
-        player.level = 1
+        fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
+        self.player = Player(0, 0, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component)
+        self.player.level = 1
+        self.map.player = self.player
+        self.map.objects.append(self.player)
+       
 
         #set the dungeon level
-        dungeon_level = 1
 
         #generate map (at this point it's not drawn to the screen
-        self.map.make_map()
+        self.map.make()
 
         #generate the FOV
-        self.initialize_fov()
+        self.map.initialize_fov()
 
         self.game_state = 'playing'
         self.inventory = []
 
-        #create the list of game messages and their colors, starts empty
-        self.game_msgs = []
 
         #a warm welcoming message!
-        screen.message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', 'red')
+        self.screen.message('Welcome stranger! Prepare to perish in the Tombs of the Ancient Kings.', 'red')
 
 
-    def initialize_fov(self):        
-
-        libtcod.console_clear(con) #unexplored areas start black
-        screen.fov_recompute = True
-
-        #create the FOV map, according to the generated map
-        screen.fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
-        for y in range(MAP_HEIGHT):
-            for x in range(MAP_WIDTH):
-                libtcod.map_set_properties(screen.fov_map, x, y, not self.map[x][y].block_sight, not self.map[x][y].blocked)
+   
 
 
     def play_game(self):
@@ -63,22 +55,22 @@ class Game:
         self.screen.key = libtcod.Key()
         while not libtcod.console_is_window_closed():
             libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, self.screen.key, self.screen.mouse)
-            self.screen.render_all()
+            self.screen.render_all(self.map)
 
             libtcod.console_flush()
 
             #check for levelups
-            Player.get_instance().check_level_up()
+            self.player.character_class.check_level_up(self.screen)
 
             #handle keys and exit game if needed
             for object in self.map.objects:
-                object.clear()
-            self.player_action = screen.handle_keys()
+                object.clear(self.screen.con)
+            self.player_action = self.screen.handle_keys(self.game_state, self.player, self.map.objects)
 
             #let monsters take their turn
             if self.game_state == 'playing' and self.player_action != 'didnt-take-turn':
                 for object in self.map.objects:
-                    if object.ai:
+                    if object is Creature and object.name != 'player':
                         object.ai.take_turn()
 
             if self.player_action == 'exit':
@@ -95,23 +87,21 @@ class Game:
         file['inventory'] = self.inventory
         file['game_msgs'] = self.game_msgs
         file['game_state'] = self.game_state
-        file['dungeon_level'] = self.dungeon_level
+        file['dungeon_level'] = self.map.dungeon_level
         file['stairs_index'] = self.map.objects.index(self.map.stairs)
         file.close()
 
 
     def load_game(self):
         #open the previously saved shelve and load the game data
-        global map, objects, player, inventory, game_msgs, game_state, dungeon_level, stairs
-
         file = shelve.open('savegame', 'r')
         self.map.map = file['map']
         self.map.objects = file['objects']
-        Player.get_instance(player=objects[file['player_index']])
+        Player.set_instance(player=objects[file['player_index']])
         self.inventory = file['inventory']
         self.game_msgs = file['game_msgs']
         self.game_state = file['game_state']
-        self.dungeon_level = file['dungeon_level']
+        self.map.dungeon_level = file['dungeon_level']
         self.map.stairs = self.map.objects[file['stairs_index']]
         file.close()
 
@@ -140,7 +130,7 @@ class Game:
                 try:
                     self.load_game()
                 except:
-                    screen.msgbox('\n No saved game to load!\n', 24)
+                    self.screen.msgbox('\n No saved game to load!\n', 24)
                     continue
                 self.play_game()
             elif choice == 2: #quit

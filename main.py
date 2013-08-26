@@ -1,28 +1,12 @@
+########################################################
+# Welcome to my Roguelike!  The base code is modified
+# from the libtcod python library tutorial, but it has
+# been adapted to use an object-oriented approach.
+########################################################
 
-import shelve
-from base_character import Base_Character
-import libtcodpy as libtcod
-
-
-#game stat vars
-from map import Map
-from object import Object
-
-game_state = 'playing'
-player_action = None
-
-####################################################################################################
-# Random Choice Methods
-####################################################################################################
-
-
-
-####################################################################################################
-# Movement Methods
-####################################################################################################
 from game import Game
 
-
+# start the game
 g = Game()
 g.game_state = 'playing'
 g.main_menu()
