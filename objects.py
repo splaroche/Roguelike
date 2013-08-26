@@ -38,7 +38,9 @@ class Object:
         #convert it to integer so the movement is restricted to the map grid
         dx = int(round(dx / distance))
         dy = int(round(dy / distance))
-        self.move(dx, dy)
+        
+        self.x +=dx
+        self.y +=dy
 
     def draw(self, fov_map, con, map):
         if (libtcod.map_is_in_fov(fov_map, self.x, self.y)) or (self.always_visible and map.map[self.x][self.y].explored):

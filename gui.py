@@ -203,7 +203,7 @@ class Screen:
                 key_char = chr(key.c)
                 if key_char == 'd':
                     #show the inventory; if an item is selected, drop it
-                    chosen_item = self.menu.inventory_menu(
+                    chosen_item = self.inventory_menu(
                         'Press the key next to an item to use it, or any other to cancel.\n')
                     if chosen_item is not None:
                         chosen_item.drop()
@@ -216,7 +216,7 @@ class Screen:
                             break
                 if key_char == 'i':
                     #show the inventory
-                    chosen_item = self.menu.inventory_menu(
+                    chosen_item = self.inventory_menu(player.equipment,
                         'Press the key next to an item to use it, or any other to cancel.\n')
                     if chosen_item is not None:
                         chosen_item.use()
@@ -228,7 +228,7 @@ class Screen:
 
                 if key_char == 'c':
                     #show character information
-                    level_up_xp = Base_Character.LEVEL_UP_BASE + self.player.level * Base_Character.LEVEL_UP_FACTOR
+                    level_up_xp = BaseCharacterClass.LEVEL_UP_BASE + self.player.level * BaseCharacterClass.LEVEL_UP_FACTOR
                     Menu.msgbox('Character Information\n\nLevel: ' + str(self.player.level) + '\nExperience: ' + str(
                         self.player.fighter.xp) + '\nExperience to level up: ' + str(
                         level_up_xp) + '\n\nMaximum HP: ' + str(
@@ -337,7 +337,7 @@ class Screen:
         return None
 
     
-    def inventory_menu(self, inventory, header):
+    def inventory_menu(self, inventory, header=''):
         #show a menu with each item of the inventory as an option
         if len(inventory) == 0:
             options = ['Inventory is empty!']
@@ -350,7 +350,7 @@ class Screen:
                     text = text + ' (on ' + item.equipment.slot + ')'
                 options.append(text)
 
-        index = self.menu(header, options, Menu.INVENTORY_WIDTH)
+        index = self.menu(header, options, self.INVENTORY_WIDTH)
 
         #if an item was chosen, return it
         if index is None or len(inventory) == 0: return None
