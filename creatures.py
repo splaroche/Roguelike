@@ -6,7 +6,7 @@ from objects import Object
 # the creature inherits from Object
 class Creature(Object):
 
-    def __init__(self, x, y, char, name, color, blocks=False, ai=None, item=None, always_visible=False,
+    def __init__(self, x, y, char, name, color, blocks=True, ai=None, item=None, always_visible=False,
                  equipment=None, character_class=None, creature_type=None, xp=0):
         Object.__init__(self, x, y, char, name, color, blocks=blocks, always_visible=always_visible)
         self.xp = xp
@@ -62,8 +62,8 @@ class BasicMonster:
                 monster.move_towards(self.player.x, self.player.y)
 
             #close enough, attack! (if the player is still alive.)
-            elif self.player.fighter.hp > 0:
-                monster.fighter.attack(self.player)
+            elif self.player.character_class.hp > 0:
+                monster.character_class.attack(self.player)
 
 
 class ConfusedMonster:
@@ -92,7 +92,7 @@ class Player(Creature):
                 equipment=equipment, character_class=character_class)
      
     # Moves the player into a square.  If the square contains a living monster, attack    
-    def move_or_attack(self, dx, dy, objects):
+    def move_or_attack(self, dx, dy, objects, map):
 
         #the coordinates the player is moving to/attacking
         x = self.x + dx
@@ -110,7 +110,7 @@ class Player(Creature):
             self.character_class.attack(target)
             return False
         else:
-            self.move(dx, dy)
+            self.move(dx, dy, map)
             return True
 
     # Run when the player dies

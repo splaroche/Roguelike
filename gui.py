@@ -171,7 +171,7 @@ class Screen:
     #########################################################################
     # Input Section
     #########################################################################
-    def handle_keys(self, game_state, player, objects):
+    def handle_keys(self, game_state, player, objects, map):
         key = self.key
         if key.vk == libtcod.KEY_ENTER and key.lalt:
             libtcod.console_set_fullself(not libtcod.console_is_fullself())
@@ -181,21 +181,21 @@ class Screen:
         if game_state == 'playing':
             #movement keys
             if key.vk == libtcod.KEY_UP or key.vk == libtcod.KEY_KP8:
-                player.move_or_attack(0, -1, objects)
+                player.move_or_attack(0, -1, objects, map)
             elif key.vk == libtcod.KEY_DOWN or key.vk == libtcod.KEY_KP2:
-                player.move_or_attack(0, 1, objects)
+                player.move_or_attack(0, 1, objects, map)
             elif key.vk == libtcod.KEY_LEFT or key.vk == libtcod.KEY_KP4:
-                player.move_or_attack(-1, 0, objects)
+                player.move_or_attack(-1, 0, objects, map)
             elif key.vk == libtcod.KEY_RIGHT or key.vk == libtcod.KEY_KP6:
-                player.move_or_attack(1, 0, objects)
+                player.move_or_attack(1, 0, objects, map)
             elif key.vk == libtcod.KEY_HOME or key.vk == libtcod.KEY_KP7:
-                player.move_or_attack(-1, -1, objects)
+                player.move_or_attack(-1, -1, objects, map)
             elif key.vk == libtcod.KEY_PAGEUP or key.vk == libtcod.KEY_KP9:
-                player.move_or_attack(1, -1, objects)
+                player.move_or_attack(1, -1, objects, map)
             elif key.vk == libtcod.KEY_END or key.vk == libtcod.KEY_KP1:
-                player.move_or_attack(-1, 1, objects)
+                player.move_or_attack(-1, 1, objects, map)
             elif key.vk == libtcod.KEY_PAGEDOWN or key.vk == libtcod.KEY_KP3:
-                player.move_or_attack(1, 1, objects)
+                player.move_or_attack(1, 1, objects, map)
             elif key.vk == libtcod.KEY_KP5:
                 pass  #do nothing ie wait for the monster to come to you
             else:

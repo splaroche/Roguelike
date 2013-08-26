@@ -65,7 +65,7 @@ class Game:
             #handle keys and exit game if needed
             for object in self.map.objects:
                 object.clear(self.screen.con)
-            self.player_action = self.screen.handle_keys(self.game_state, self.player, self.map.objects)
+            self.player_action = self.screen.handle_keys(self.game_state, self.player, self.map.objects, self.map)
 
             #let monsters take their turn
             if self.game_state == 'playing' and self.player_action != 'didnt-take-turn':

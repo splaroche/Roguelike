@@ -22,10 +22,11 @@ class Object:
         dy = other.y - self.y
         return math.sqrt(dx ** 2 + dy ** 2)
 
-    def move(self, dx, dy):
-        #move the object
-        self.x += dx
-        self.y += dy
+    def move(self, dx, dy, map):
+        if not map.is_blocked(self.x + dx, self.y + dy):
+            #move the object
+            self.x += dx
+            self.y += dy
 
     def move_towards(self, target_x, target_y):
         #vector from this object to the target and distance
