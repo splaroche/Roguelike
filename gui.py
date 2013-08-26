@@ -203,10 +203,11 @@ class Screen:
                 key_char = chr(key.c)
                 if key_char == 'd':
                     #show the inventory; if an item is selected, drop it
-                    chosen_item = self.inventory_menu(
+                    chosen_item = self.inventory_menu(player.inventory,
                         'Press the key next to an item to use it, or any other to cancel.\n')
                     if chosen_item is not None:
-                        chosen_item.drop()
+                        player.drop_item(chosen_item, self)
+                        objects.append(chosen_item)
 
                 if key_char == 'g':
                     #pick up an item
@@ -357,7 +358,8 @@ class Screen:
 
         #if an item was chosen, return it
         if index is None or len(inventory) == 0: return None
-        return inventory[index].item
+        
+        return inventory[index]
     
     def msgbox(self, text, width=50):
         self.menu(text, [], width)

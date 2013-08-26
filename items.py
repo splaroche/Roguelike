@@ -33,7 +33,7 @@ class Equipment(Object):
         #dequip object and show a message about it
         if not self.is_equipped: return
         self.is_equipped = False
-        gui.Screen.get_instance().message('Dequipped ' + self.owner.name + ' from ' + self.slot + '.', libtcod.light_yellow)
+        screen.message('Dequipped ' + self.owner.name + ' from ' + self.slot + '.', libtcod.light_yellow)
 
 
 

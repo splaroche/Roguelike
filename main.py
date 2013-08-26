@@ -6,7 +6,6 @@
 
 from game import Game
 
-# start the game
+# create the game and call up the main menua
 g = Game()
-g.game_state = 'playing'
 g.main_menu()

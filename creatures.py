@@ -29,24 +29,25 @@ class Creature(Object):
         self.inventory = []
         
 
-    def drop_item(self):
-        #add to the map and remove from the player's inventory.  also, place it at the player's coordinates
-        self.objects.append(self.owner)
-        self.owner.inventory.remove(self.owner)
-        self.owner.x = self.player.x
-        self.owner.y = self.player.y
+    def drop_item(self, item, screen):
+        # special case if it's an equipped item
+        if isinstance(item, items.Equipment) and item.is_equipped:
+            self.equipment.remove(item)
+            item.dequip(screen)
+        else :
+            #remove from the player's inventory.  also, place it at the player's coordinates                        
+            self.inventory.remove(item)
+        item.x = self.x
+        item.y = self.y
 
-        #dequip equipment that is dropped
-        if self.equipment:
-            self.equipment.dequip()
-
-        gui.Screen.get_instance().message('You dropped a ' + self.owner.name + '.', 'yellow')
+        
+        screen.message('You dropped a ' + item.name + '.', libtcod.yellow)
 
     #an item that can be picked up and used
     def pick_up_item(self, item, screen):
         #add to the player's inventory and remove from the map
         if len(self.inventory) >= 25:
-            screen.message('Your inventory is full, cannot pick up ' + item.name + '.', 'red')
+            screen.message('Your inventory is full, cannot pick up ' + item.name + '.', libtcod.red)
         else:
             self.inventory.append(item)
             screen.message('You picked up a ' + item.name + '!', 'green')
