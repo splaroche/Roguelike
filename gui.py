@@ -1,6 +1,6 @@
 import textwrap
 import libtcodpy as libtcod
-
+import character_classes
 __author__ = 'Steven'
 
 
@@ -210,8 +210,8 @@ class Screen:
 
                 if key_char == 'g':
                     #pick up an item
-                    for object in self.objects:
-                        if object.x == self.player.x and object.y == self.player.y and object.item:
+                    for object in objects:
+                        if object.x == player.x and object.y == player.y and object.item:
                             object.item.pick_up()
                             break
                 if key_char == 'i':
@@ -223,18 +223,18 @@ class Screen:
 
                 if key_char == '<' or key_char == ',':
                     #go down the stairs, if the player is on them
-                    if self.stairs.x == self.player.x and self.stairs.y == self.player.y:
+                    if map.stairs.x == player.x and map.stairs.y == player.y:
                         self.map.next_level()
 
                 if key_char == 'c':
                     #show character information
-                    level_up_xp = BaseCharacterClass.LEVEL_UP_BASE + self.player.level * BaseCharacterClass.LEVEL_UP_FACTOR
-                    Menu.msgbox('Character Information\n\nLevel: ' + str(self.player.level) + '\nExperience: ' + str(
-                        self.player.fighter.xp) + '\nExperience to level up: ' + str(
+                    level_up_xp = character_classes.BaseCharacterClass.LEVEL_UP_BASE + player.level * character_classes.BaseCharacterClass.LEVEL_UP_FACTOR
+                    self.msgbox('Character Information\n\nLevel: ' + str(player.level) + '\nExperience: ' + str(
+                        player.xp) + '\nExperience to level up: ' + str(
                         level_up_xp) + '\n\nMaximum HP: ' + str(
-                        self.player.fighter.max_hp) + '\nAttack: ' + str(
-                        self.player.fighter.power) + '\nDefense: ' + str(
-                        self.player.fighter.defense), self.CHARACTER_SCREEN_WIDTH)
+                        player.character_class.max_hp) + '\nAttack: ' + str(
+                        player.character_class.power) + '\nDefense: ' + str(
+                        player.character_class.defense), self.CHARACTER_SCREEN_WIDTH)
 
                 return 'didnt-take-turn'
 

@@ -1,5 +1,5 @@
 import libtcodpy as libtcod
-from gui import Screen
+import gui
 from objects import Object
 __author__ = 'Steven'
 
@@ -27,13 +27,13 @@ class Equipment(Object):
 
         #equip object and show a message about it
         self.is_equipped = True
-        Screen.get_instance().message('Equipped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
+        gui.Screen.get_instance().message('Equipped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
 
     def dequip(self):
         #dequip object and show a message about it
         if not self.is_equipped: return
         self.is_equipped = False
-        Screen.get_instance().message('Dequipped ' + self.owner.name + ' from ' + self.slot + '.', libtcod.light_yellow)
+        gui.Screen.get_instance().message('Dequipped ' + self.owner.name + ' from ' + self.slot + '.', libtcod.light_yellow)
 
 
 
@@ -54,7 +54,7 @@ class Item(Object):
         if self.owner.equipment:
             self.owner.equipment.dequip()
 
-        Screen.get_instance().message('You dropped a ' + self.owner.name + '.', 'yellow')
+        gui.Screen.get_instance().message('You dropped a ' + self.owner.name + '.', 'yellow')
 
     #an item that can be picked up and used
     def pick_up(self):
@@ -64,7 +64,7 @@ class Item(Object):
         else:
             self.inventory.append(self.owner)
             self.objects.remove(self.owner)
-            Screen.get_instance().message('You picked up a ' + self.owner.name + '!', 'green')
+            gui.Screen.get_instance().message('You picked up a ' + self.owner.name + '!', 'green')
 
             #special case: automatically equip, if the corresponding equipment slot is unused
             equipment = self.owner.equipment
