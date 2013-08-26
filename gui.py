@@ -1,6 +1,6 @@
-import textwrap
+import textwrap, inspect
 import libtcodpy as libtcod
-import character_classes
+import character_classes, items
 __author__ = 'Steven'
 
 
@@ -211,12 +211,15 @@ class Screen:
                 if key_char == 'g':
                     #pick up an item
                     for object in objects:
-                        if object.x == player.x and object.y == player.y and object.item:
-                            object.item.pick_up()
+                        # check if the object is an item or equipment
+                        if object.x == player.x and object.y == player.y and (isinstance(object, items.Item) or isinstance(object, items.Equipment)) :                            
+                            # pick up the item and remove it from the objects list
+                            player.pick_up_item(object, self)
+                            objects.remove(object)
                             break
                 if key_char == 'i':
                     #show the inventory
-                    chosen_item = self.inventory_menu(player.equipment,
+                    chosen_item = self.inventory_menu(player.inventory,
                         'Press the key next to an item to use it, or any other to cancel.\n')
                     if chosen_item is not None:
                         chosen_item.use()
@@ -346,8 +349,8 @@ class Screen:
             for item in inventory:
                 text = item.name
                 #show additional information, in case it is equipped.
-                if item.equipment and item.equipment.is_equipped:
-                    text = text + ' (on ' + item.equipment.slot + ')'
+                #if item.equipment and item.equipment.is_equipped:
+                #    text = text + ' (on ' + item.equipment.slot + ')'
                 options.append(text)
 
         index = self.menu(header, options, self.INVENTORY_WIDTH)

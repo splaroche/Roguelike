@@ -18,17 +18,17 @@ class BaseCharacterClass:
       
     @property
     def power(self):
-        bonus = sum(equipment.power_bonus for equipment in self.get_all_equipped(self.owner))
+        bonus = sum(equipment.power_bonus for equipment in self.owner.get_all_equipped())
         return self.base_power + bonus
 
     @property
     def defense(self):
-        bonus = sum(equipment.defense_bonus for equipment in self.get_all_equipped(self.owner))
+        bonus = sum(equipment.defense_bonus for equipment in self.owner.get_all_equipped())
         return self.base_defense + bonus
 
     @property
     def max_hp(self):
-        bonus = sum(equipment.max_hp_bonus for equipment in self.get_all_equipped(self.owner))
+        bonus = sum(equipment.max_hp_bonus for equipment in self.owner.get_all_equipped())
         return self.base_power + bonus
 
     def attack(self, target, screen):
@@ -94,20 +94,4 @@ class BaseCharacterClass:
                     self.base_power += 1
                 elif choice == 2:
                     self.base_defense += 1
-
-    def get_equipped_in_slot(self, slot): # returns the equipment in a slot, or None if it's empty
-        for obj in self.equipment:
-            if obj.equipment.slot == slot and obj.equipment.is_equipped:
-                return obj.equipment
-        return None
-
-    def get_all_equipped(self, owner):  #returns a list of equipped items
-        if owner.name == 'player':
-            equipped_list = []
-            for item in owner.equipment:
-                if item.is_equipped:
-                    equipped_list.append(item.equipment)
-            return equipped_list
-        else:
-            return []  #other objects have no equipment
 

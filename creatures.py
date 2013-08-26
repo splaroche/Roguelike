@@ -1,6 +1,7 @@
 import libtcodpy as libtcod
 from gui import Screen
 from objects import Object
+import items
 # A creature class. A creature is defined as anything that is alive, like Monsters or the Player.
 
 # the creature inherits from Object
@@ -25,7 +26,52 @@ class Creature(Object):
             self.item.owner = self
 
         self.equipment = equipment
+        self.inventory = []
         
+
+    def drop_item(self):
+        #add to the map and remove from the player's inventory.  also, place it at the player's coordinates
+        self.objects.append(self.owner)
+        self.owner.inventory.remove(self.owner)
+        self.owner.x = self.player.x
+        self.owner.y = self.player.y
+
+        #dequip equipment that is dropped
+        if self.equipment:
+            self.equipment.dequip()
+
+        gui.Screen.get_instance().message('You dropped a ' + self.owner.name + '.', 'yellow')
+
+    #an item that can be picked up and used
+    def pick_up_item(self, item, screen):
+        #add to the player's inventory and remove from the map
+        if len(self.inventory) >= 25:
+            screen.message('Your inventory is full, cannot pick up ' + item.name + '.', 'red')
+        else:
+            self.inventory.append(item)
+            screen.message('You picked up a ' + item.name + '!', 'green')
+
+            #special case: automatically equip, if the corresponding equipment slot is unused
+            if isinstance(item, items.Equipment):
+                equipment = self.equipment
+                if equipment and self.get_equipped_in_slot(item.slot) is None:
+                    equipment.equip()
+
+    def get_equipped_in_slot(self, slot): # returns the equipment in a slot, or None if it's empty
+        for obj in self.equipment:
+            if obj.equipment.slot == slot and obj.equipment.is_equipped:
+                return obj.equipment
+        return None
+
+    def get_all_equipped(self):  #returns a list of equipped items        
+        equipped_list = []
+        for item in self.equipment:
+            if item.is_equipped:
+                equipped_list.append(item.equipment)
+        return equipped_list
+    
+
+
     ####################################################################################################
     # Death Methods
     ####################################################################################################
