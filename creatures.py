@@ -27,7 +27,7 @@ class Creature(Object):
 
         self.equipment = equipment
         self.inventory = []
-        
+
 
     def drop_item(self, item, screen):
         # special case if it's an equipped item
@@ -45,6 +45,7 @@ class Creature(Object):
 
     #an item that can be picked up and used
     def pick_up_item(self, item, screen):
+        item.owner = self
         #add to the player's inventory and remove from the map
         if len(self.inventory) >= 25:
             screen.message('Your inventory is full, cannot pick up ' + item.name + '.', libtcod.red)
@@ -66,9 +67,10 @@ class Creature(Object):
 
     def get_all_equipped(self):  #returns a list of equipped items        
         equipped_list = []
-        for item in self.equipment:
-            if item.is_equipped:
-                equipped_list.append(item.equipment)
+        if self.equipment:
+            for item in self.equipment:
+                if item.is_equipped:
+                    equipped_list.append(item.equipment)
         return equipped_list
     
 
@@ -94,23 +96,19 @@ class Creature(Object):
 # AI classes
 #########################################################################
 class BasicMonster:
-    def __init__(self, player, fov_map):
-        self.fov_map = fov_map
-        self.player = player
-
+       
     #AI for a basic monster
-    def take_turn(self):
+    def take_turn(self, player, screen) :
         #a basic monster takes its turn.  If you can see it, it can see you
-        monster = self.owner
-        if libtcod.map_is_in_fov(self.fov_map, monster.x, monster.y):
-
+        monster = self.owner        
+        if libtcod.map_is_in_fov(screen.fov_map, monster.x, monster.y):
             #move towards player if far away
-            if monster.distance_to(self.player) >= 2:
-                monster.move_towards(self.player.x, self.player.y)
+            if monster.distance_to(player) >= 2:
+                monster.move_towards(player.x, player.y)
 
             #close enough, attack! (if the player is still alive.)
-            elif self.player.character_class.hp > 0:
-                monster.character_class.attack(self.player)
+            elif player.character_class.hp > 0:
+                monster.character_class.attack(player, screen)
 
 
 class ConfusedMonster:

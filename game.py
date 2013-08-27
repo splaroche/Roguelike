@@ -70,8 +70,8 @@ class Game:
             #let monsters take their turn
             if self.game_state == 'playing' and self.player_action != 'didnt-take-turn':
                 for object in self.map.objects:
-                    if object is Creature and object.name != 'player':
-                        object.ai.take_turn()
+                    if isinstance(object, Creature) and object.name != 'player':                        
+                        object.ai.take_turn(self.player, self.screen)
 
             if self.player_action == 'exit':
                 self.save_game()
@@ -82,10 +82,10 @@ class Game:
         #open a new empty shelve (possibly overwriting an old one) to write the game data
         file = shelve.open('savegame', 'n')
         file['map'] = self.map.map
-        file['objects'] = self.map.objects
-        file['player_index'] = self.map.objects.index(Player.get_instance())
+        file['objects'] =self.map.objects
+        file['player_index'] = self.map.objects.index(self.player)
         file['inventory'] = self.inventory
-        file['game_msgs'] = self.game_msgs
+        file['game_msgs'] = self.screen.game_msgs
         file['game_state'] = self.game_state
         file['dungeon_level'] = self.map.dungeon_level
         file['stairs_index'] = self.map.objects.index(self.map.stairs)
@@ -97,9 +97,10 @@ class Game:
         file = shelve.open('savegame', 'r')
         self.map.map = file['map']
         self.map.objects = file['objects']
-        Player.set_instance(player=objects[file['player_index']])
+        self.player =self.map.objects[file['player_index']]
+        self.map.player = player
         self.inventory = file['inventory']
-        self.game_msgs = file['game_msgs']
+        self.screen.game_msgs = file['game_msgs']
         self.game_state = file['game_state']
         self.map.dungeon_level = file['dungeon_level']
         self.map.stairs = self.map.objects[file['stairs_index']]

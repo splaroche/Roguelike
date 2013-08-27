@@ -8,6 +8,7 @@ class BaseCharacterClass:
     LEVEL_UP_FACTOR = 150
     LEVEL_SCREEN_WIDTH = 40
 
+
     #combat-related properties and methods (monster, player, NPC).
     def __init__(self, hp, defense, power):      
         self.base_max_hp = hp
@@ -15,6 +16,8 @@ class BaseCharacterClass:
         self.base_defense = defense
         self.base_power = power        
 
+        # The player object
+        self.player = None
       
     @property
     def power(self):
@@ -29,20 +32,19 @@ class BaseCharacterClass:
     @property
     def max_hp(self):
         bonus = sum(equipment.max_hp_bonus for equipment in self.owner.get_all_equipped())
-        return self.base_power + bonus
+        return self.base_max_hp + bonus
 
     def attack(self, target, screen):
         #a simple formula for attack damage
-        damage = self.power - target.fighter.defense
+        damage = self.power - target.character_class.defense
 
         if damage > 0:
             #make the target take some damage
-            target.fighter.take_damage(damage)
-            screen.menu(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.',
-                    'white')
+            target.character_class.take_damage(damage)
+            screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
         else:
-            screen.menu(self.owner.name.capitalize() + ' attacks ' + target.name + ' but it has no effect!',
-                    'white')
+            screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' but it has no effect!')
+                    
 
     def heal_self(self, amount):
         #heal by the given amount, without going over the maximum
@@ -61,8 +63,9 @@ class BaseCharacterClass:
             if function is not None:
                 function(self.owner)
 
-         #yield experience to the player
-        Player.get_instance().xp += self.xp
+        #yield experience to the player
+        if self.player:
+            self.player.xp += self.xp
 
     ##########################################################################################
     # Leveling Functions

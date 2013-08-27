@@ -44,32 +44,19 @@ class Item(Object):
         self.use_function = use_function        
 
   
-    def use(self):
+    def use(self, screen):
 
         #special case: if the object has the Equipment component, the 'use' action it to equip/dequip
-        if self.owner.equipment:
+        if isinstance(self, Equipment) and self.owner.equipment:
             self.owner.equipment.toggle_equip()
             return
 
         #just call the use_function if it is defined
         if self.use_function is None:
-            Screen.get_instance().message('The ' + self.owner.name + ' cannot be used.')
+            screen.message('The ' + self.owner.name + ' cannot be used.')
         else:
-            if self.use_function(self) != 'cancelled':
+            if self.use_function(screen) != 'cancelled':
                 self.inventory.remove(self.owner) #destroy after use, unless it was cancelled for some reason
-
-
-
-class Spell_Scroll(Item):
-
-    def __init__(self, use_function, spell):        
-        Item.__init__(self, use_function)
-        self.spell = spell
-
-    def use(self):
-        if self.use_function(self) != 'cancelled':
-            self.owner.inventory.remove(self.owner)
-
 
 class Spell:
 
@@ -101,17 +88,17 @@ class Spell:
                 obj.character_class.take_damage(self.FIREBALL_DAMAGE)
 
 
-    def cast_heal(self):
+    def cast_heal(self, screen):
         #heal the player
-        if Player.get_instance().character_class.hp == Player.get_instance().character_class.max_hp:
-            Screen.get_instance().message('You are already at full health!', libtcod.red)
+        if self.owner.character_class.hp == self.owner.character_class.max_hp:
+            screen.message('You are already at full health!', libtcod.red)
             return 'cancelled'
 
-        Screen.get_instance().message('Your wounds start to feel better!', libtcod.light_violet)
-        Player.get_instance().class_name.heal_self(self.HEAL_AMOUNT)
+        screen.message('Your wounds start to feel better!', libtcod.light_violet)
+        self.owner.character_class.heal_self(self.HEAL_AMOUNT)
 
 
-    def cast_lightning(self):
+    def cast_lightning(self, screen):
         #find closest enemy (inside a maximum range) and damage it
         monster = self.closest_monster(self.LIGHTNING_RANGE)
         if monster is None: #no enemy found within maximum range
@@ -119,14 +106,14 @@ class Spell:
             return 'cancelled'
 
         #zap it!
-        Screen.get_instance().message('A lightning bolt strikes the ' + monster.name + ' with a loud thunder! The damage is '
+        screen.message('A lightning bolt strikes the ' + monster.name + ' with a loud thunder! The damage is '
                 + str(self.LIGHTNING_DAMAGE) + ' hit points!', libtcod.light_blue)
         monster.character_class.take_damage(self.LIGHTNING_DAMAGE)
 
 
-    def cast_confusion(self):
+    def cast_confusion(self, screen):
         #ask the player for a target to confuse
-        Screen.get_instance().message('Left-click an enemy to confuse it, or right-click to cancel.', libtcod.light_cyan)
+        screen.message('Left-click an enemy to confuse it, or right-click to cancel.', libtcod.light_cyan)
         monster = Screen.get_instance().target_monster(self.CONFUSE_RANGE)
 
         if monster is None: #no enemy found within maximum range
@@ -135,7 +122,7 @@ class Spell:
             old_ai = monster.ai
             monster.ai = ConfusedMonster(old_ai, self.CONFUSE_NUM_TURNS)
             monster.ai.owner = monster #tell the new component who owns it
-            Screen.get_instance().message('The eyes of the ' + monster.name + ' look vacant, as he starts to stumble around!', libtcod.light_blue)
+            screen.message('The eyes of the ' + monster.name + ' look vacant, as he starts to stumble around!', libtcod.light_blue)
 
 
     def closest_monster(self, max_range, objects):
@@ -152,5 +139,32 @@ class Spell:
                     closest_dist = dist
         return closest_enemy
 
+
+
+
+
+class Spell_Scroll(Item, Spell):
+
+    def __init__(self, x, y, char, name, color, spell_name):     
+        Item.__init__(self, x, y, char, name, color, use_function=None)
+        self.spell_name = spell_name
+    
+    def use(self, screen):        
+        # 13-08-25: spell functions assignment is based on the spell_name.  This was done because
+        # assigning the use_function directly at creation time was causing shelve not to 
+        # save the objects list.  I hope to fix this, as it's a pain to add new spells.
+        if self.spell_name == 'heal':
+            if self.cast_heal(screen) != 'cancelled':
+                self.owner.inventory.remove(self)
+        elif self.spell_name == 'fireball':
+            self.use_function = self.cast_fireball(screen)
+        elif self.spell_name == 'lightning':
+            self.use_function = self.cast_lightning(screen)
+        elif self.spell_name =='confusion':
+            self.use_function = self.cast_confusion(screen)
+        #print self.use_function
+
+        #if self.use_function(screen) != 'cancelled':
+         #   self.owner.inventory.remove(self.owner)
 
 

@@ -147,16 +147,16 @@ class GameMap:
                 if choice == 'orc':
                     #create an orc
                     fighter_component = character_classes.BaseCharacterClass(hp=20, defense=0, power=4)
-                    ai_component = creatures.BasicMonster(self.player, self.screen.fov_map)
+                    ai_component = creatures.BasicMonster()
                     monster = creatures.Creature(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
                         character_class=fighter_component, ai=ai_component, xp=35)
                 elif choice == 'troll':
                     #create a troll
                     fighter_component = character_classes.BaseCharacterClass(hp=30, defense=2, power=8)
-                    ai_component = creatures.BasicMonster(self.player, self.screen.fov_map)
+                    ai_component = creatures.BasicMonster()
                     monster = creatures.Creature(x, y, 'T', 'troll', libtcod.darker_green, blocks=True,
                                      character_class=fighter_component, ai=ai_component, xp=100)
-
+                monster.character_class.player = self.player
                 self.objects.append(monster)
 
         #maximum number of items per room
@@ -182,16 +182,16 @@ class GameMap:
                 choice = self.random_choice(item_chances)
                 if choice == 'heal':
                     #create a healing potion
-                    item = items.Item(x, y, '!', 'healing potion', libtcod.violet, use_function=items.Spell.cast_heal)
+                    item = items.Spell_Scroll(x, y, '!', 'healing potion', libtcod.violet, 'heal')
                 elif choice == 'lightning':
                     #create a lightning bolt scroll
-                    item = items.Item(x, y, '#', 'scroll of lightning bolt', libtcod.dark_blue, use_function=items.Spell.cast_lightning)
+                    item = items.Spell_Scroll(x, y, '#', 'scroll of lightning bolt', libtcod.dark_blue, 'lightning')
                 elif choice == 'fireball':
                     #create a fireball scroll
-                    item = items.Item(x, y, '#', 'scroll of fireball', libtcod.dark_orange, use_function=items.Spell.cast_fireball)
+                    item = items.Spell_Scroll(x, y, '#', 'scroll of fireball', libtcod.dark_orange, 'fireball')
                 elif choice == 'confuse':
                     #create a confuse scroll
-                    item = items.Item(x, y, '#', 'scroll of confusion', libtcod.light_blue, use_function=items.Spell.cast_confusion)                
+                    item = items.Spell_Scroll(x, y, '#', 'scroll of confusion', libtcod.light_blue, 'confuse')
                 elif choice == 'sword':                    #create a sword                    
                     item = items.Equipment(x, y, '/', 'sword', libtcod.sky, slot='right hand')
                 self.objects.append(item)

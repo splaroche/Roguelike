@@ -1,4 +1,5 @@
 import libtcodpy as libtcod
+import math
 class Object:
 #this is a generic object: the player, a monster, etc
     def __init__(self, x, y, char, name, color, blocks=False, always_visible=False):

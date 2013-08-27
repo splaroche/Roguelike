@@ -61,7 +61,7 @@ class Screen:
     #########################################################################
     # Gui Section
     #########################################################################
-    def message(self, new_msg, color):        
+    def message(self, new_msg, color=libtcod.white):        
         #split the message if necessary, among multiple lines
         new_msg_lines = textwrap.wrap(new_msg, self.MSG_WIDTH)
 
@@ -223,7 +223,7 @@ class Screen:
                     chosen_item = self.inventory_menu(player.inventory,
                         'Press the key next to an item to use it, or any other to cancel.\n')
                     if chosen_item is not None:
-                        chosen_item.use()
+                        chosen_item.use(self)
 
                 if key_char == '<' or key_char == ',':
                     #go down the stairs, if the player is on them
@@ -267,27 +267,6 @@ class Screen:
 
 
     
-
-
-    @staticmethod
-    def get_libtcod_color(color):
-        return {
-            'dark_blue': libtcod.dark_blue,
-            'dark_orange': libtcod.dark_orange,
-            'darker_green': libtcod.darker_green,
-            'desaturated_green': libtcod.desaturated_green,
-            'green': libtcod.green,
-            'light_blue': libtcod.light_blue,
-            'light_cyan': libtcod.light_cyan,
-            'light_green': libtcod.light_green,
-            'light_violet': libtcod.light_violet,
-            'light_yellow': libtcod.light_yellow,
-            'orange': libtcod.orange,
-            'sky': libtcod.sky,
-            'red': libtcod.red,
-            'violet': libtcod.violet,
-            'yellow': libtcod.yellow
-        }.get(color, libtcod.white)
 
 
     #Constants
