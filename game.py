@@ -22,7 +22,7 @@ class Game:
 
         #create object representing the player
         fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
-        self.player = Player(0, 0, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component)
+        self.player = Player(0, 0, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component, screen=self.screen)
         self.player.level = 1
         self.map.player = self.player
         self.map.objects.append(self.player)
@@ -60,7 +60,7 @@ class Game:
             libtcod.console_flush()
 
             #check for levelups
-            self.player.character_class.check_level_up(self.screen)
+            self.player.character_class.check_level_up()
 
             #handle keys and exit game if needed
             for object in self.map.objects:

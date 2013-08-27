@@ -149,13 +149,13 @@ class GameMap:
                     fighter_component = character_classes.BaseCharacterClass(hp=20, defense=0, power=4)
                     ai_component = creatures.BasicMonster()
                     monster = creatures.Creature(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
-                        character_class=fighter_component, ai=ai_component, xp=35)
+                        character_class=fighter_component, ai=ai_component, xp=35, screen=self.screen)
                 elif choice == 'troll':
                     #create a troll
                     fighter_component = character_classes.BaseCharacterClass(hp=30, defense=2, power=8)
                     ai_component = creatures.BasicMonster()
                     monster = creatures.Creature(x, y, 'T', 'troll', libtcod.darker_green, blocks=True,
-                                     character_class=fighter_component, ai=ai_component, xp=100)
+                                     character_class=fighter_component, ai=ai_component, xp=100, screen=self.screen)
                 monster.character_class.player = self.player
                 self.objects.append(monster)
 

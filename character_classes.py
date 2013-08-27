@@ -10,12 +10,12 @@ class BaseCharacterClass:
 
 
     #combat-related properties and methods (monster, player, NPC).
-    def __init__(self, hp, defense, power):      
+    def __init__(self, hp, defense, power, screen=None):      
         self.base_max_hp = hp
         self.hp = hp
         self.base_defense = defense
         self.base_power = power        
-
+        self.screen = screen
         # The player object
         self.player = None
       
@@ -34,16 +34,16 @@ class BaseCharacterClass:
         bonus = sum(equipment.max_hp_bonus for equipment in self.owner.get_all_equipped())
         return self.base_max_hp + bonus
 
-    def attack(self, target, screen):
+    def attack(self, target):
         #a simple formula for attack damage
         damage = self.power - target.character_class.defense
 
         if damage > 0:
             #make the target take some damage
             target.character_class.take_damage(damage)
-            screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
+            self.screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
         else:
-            screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' but it has no effect!')
+            self.screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' but it has no effect!')
                     
 
     def heal_self(self, amount):
@@ -59,9 +59,7 @@ class BaseCharacterClass:
 
         #check for death.  if there's a death function call it
         if self.hp <= 0:
-            function = self.death_function
-            if function is not None:
-                function(self.owner)
+            self.owner.death()
 
         #yield experience to the player
         if self.player:
@@ -71,7 +69,7 @@ class BaseCharacterClass:
     # Leveling Functions
     ##########################################################################################
     # check the level if the object is the player
-    def check_level_up(self, screen):
+    def check_level_up(self):
         if self.owner.name == 'player':
             player = self.owner
             #see if the player's experience is enough to level-up
@@ -80,11 +78,11 @@ class BaseCharacterClass:
                 #it is! level up
                 player.level += 1
                 player.xp -= level_up_xp
-                screen.menu('Your battle skills grow stronger! You reached level ' + str(player.level) + '!', 'yellow')
+                self.screen.menu('Your battle skills grow stronger! You reached level ' + str(player.level) + '!', 'yellow')
 
                 choice = None
                 while choice is None: #keep asking until a choice is made
-                    choice = screen.menu('Level up! Choose a stat to raise:\n',
+                    choice = self.screen.menu('Level up! Choose a stat to raise:\n',
                                        ['Constitution (+20 HP, from ' + str(player.fighter.max_hp) + ')',
                                         'Strength (+1 attack, from ' + str(player.fighter.power) + ')',
                                         'Agility (+1 defense, from ' + str(player.fighter.defense) + ')'],

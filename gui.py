@@ -25,38 +25,28 @@ class Screen:
     # Character self Constants
     CHARACTER_SCREEN_WIDTH = 30
 
-    # instance var
-    _instance = None
-
     def __init__(self, mouse=None, key=None):
 
-        if self._instance is None:
-            # initialize the console
-            # set the font, and consoles
-            libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
-            libtcod.console_init_root(self.SCREEN_WIDTH, self.SCREEN_HEIGHT, 'python/libtcod tutorial', False)
-            self.con = libtcod.console_new(self.MAP_WIDTH, self.MAP_HEIGHT)
-            self.panel = libtcod.console_new(self.SCREEN_WIDTH, self.PANEL_HEIGHT)
-            libtcod.sys_set_fps(self.LIMIT_FPS)
+        # initialize the console
+        # set the font, and consoles
+        libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
+        libtcod.console_init_root(self.SCREEN_WIDTH, self.SCREEN_HEIGHT, 'python/libtcod tutorial', False)
+        self.con = libtcod.console_new(self.MAP_WIDTH, self.MAP_HEIGHT)
+        self.panel = libtcod.console_new(self.SCREEN_WIDTH, self.PANEL_HEIGHT)
+        libtcod.sys_set_fps(self.LIMIT_FPS)
 
-            # create the tile colors
-            self.color_dark_wall = libtcod.Color(0, 0, 100)
-            self.color_dark_ground = libtcod.Color(50, 50, 100)
-            self.color_light_wall = libtcod.Color(130, 110, 50)
-            self.color_light_ground = libtcod.Color(200, 180, 50)
+        # create the tile colors
+        self.color_dark_wall = libtcod.Color(0, 0, 100)
+        self.color_dark_ground = libtcod.Color(50, 50, 100)
+        self.color_light_wall = libtcod.Color(130, 110, 50)
+        self.color_light_ground = libtcod.Color(200, 180, 50)
 
-            self.fov_map = None
-            self.fov_recompute = False
+        self.fov_map = None
+        self.fov_recompute = False
 
-            self.mouse = mouse
-            self.key = key
-            self.game_msgs = []
-
-            self._instance = self
-
-
-    def get_instance(self, screen=None):
-        return self._instance
+        self.mouse = mouse
+        self.key = key
+        self.game_msgs = []
 
     #########################################################################
     # Gui Section

@@ -8,7 +8,7 @@ import items
 class Creature(Object):
 
     def __init__(self, x, y, char, name, color, blocks=True, ai=None, item=None, always_visible=False,
-                 equipment=None, character_class=None, creature_type=None, xp=0):
+                 equipment=None, character_class=None, creature_type=None, xp=0, screen=None):
         Object.__init__(self, x, y, char, name, color, blocks=blocks, always_visible=always_visible)
         self.xp = xp
         self.character_class = character_class
@@ -27,6 +27,10 @@ class Creature(Object):
 
         self.equipment = equipment
         self.inventory = []
+
+        self.screen = screen
+        if self.screen:
+            self.character_class.screen = screen
 
 
     def drop_item(self, item, screen):
@@ -80,7 +84,7 @@ class Creature(Object):
     ####################################################################################################
     def death(self):
         #transform it into a nasty corpse! it doesn't block, can't be attacked and doesn't move
-        Screen.get_instance().message(self.name.capitalize() + ' is dead! You gain ' + str(self.xp) + ' experience points!',
+        self.screen.message(self.name.capitalize() + ' is dead! You gain ' + str(self.xp) + ' experience points!',
                 libtcod.orange)
         self.char = '%'
         self.color = libtcod.dark_red
@@ -108,7 +112,7 @@ class BasicMonster:
 
             #close enough, attack! (if the player is still alive.)
             elif player.character_class.hp > 0:
-                monster.character_class.attack(player, screen)
+                monster.character_class.attack(player)
 
 
 class ConfusedMonster:
@@ -132,9 +136,9 @@ class ConfusedMonster:
 # The class is accesbile as a singleton by calling get_instance()
 #################################################################################
 class Player(Creature):    
-    def __init__(self, x, y, char, name, color, character_class, blocks=True, equipment=[]):
+    def __init__(self, x, y, char, name, color, character_class, blocks=True, equipment=[], screen=None):
            Creature.__init__(self, x=x, y=y, char=char, name=name, color=color, blocks=True, ai=None, always_visible=True, 
-                equipment=equipment, character_class=character_class)
+                equipment=equipment, character_class=character_class, screen=screen)
      
     # Moves the player into a square.  If the square contains a living monster, attack    
     def move_or_attack(self, dx, dy, objects, map):
@@ -161,7 +165,7 @@ class Player(Creature):
     # Run when the player dies
     def death(self):
         #the game ended!
-        Screen.get_instance().message('You died!', libtcod.red)        
+        self.screen.message('You died!', libtcod.red)        
 
         #for added effect, transform the player into a corpse!
         self.char = '%'
