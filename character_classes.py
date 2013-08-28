@@ -59,12 +59,13 @@ class BaseCharacterClass:
 
         #check for death.  if there's a death function call it
         if self.hp <= 0:
-            self.owner.death()
+           game_state = self.owner.death()
 
         #yield experience to the player
         if self.player:
             self.player.xp += self.xp
 
+        return game_state
     ##########################################################################################
     # Leveling Functions
     ##########################################################################################

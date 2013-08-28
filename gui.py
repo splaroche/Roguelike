@@ -1,18 +1,29 @@
+###########################################################################################
+# The GUI module contains any classes directly affecting screen rendering.
+###########################################################################################
+
 import textwrap, inspect
 import libtcodpy as libtcod
 import character_classes, items
 __author__ = 'Steven'
 
-
+###########################################################################################
+# The Screen class represents the on screen display, including menus, map area, and consoles
+# and the (re)rendering of same.
+###########################################################################################
 class Screen:
-# Console Constants
+    #Screen and Map constants
     SCREEN_WIDTH = 80
     SCREEN_HEIGHT = 50
     MAP_WIDTH = 80
     MAP_HEIGHT = 43
+
+    #Limiter Constant (used to reduce the speed of the game to be actually turnbased.  
+    #removing calls to LIMIT_FPS result in two keystrokes being recorded for every one 
+    #entered.)
     LIMIT_FPS = 20
 
-    # Menu Bar constants
+    # Menu Bar Panel constants
     BAR_WIDTH = 20
     PANEL_HEIGHT = 7
     PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
@@ -22,11 +33,13 @@ class Screen:
     MSG_WIDTH = SCREEN_WIDTH - BAR_WIDTH - 2
     MSG_HEIGHT = PANEL_HEIGHT - 1
 
-    # Character self Constants
+    # Character Screen Constants
     CHARACTER_SCREEN_WIDTH = 30
 
-    def __init__(self, mouse=None, key=None):
+    #Item Menu Constants
+    INVENTORY_WIDTH = 50
 
+    def __init__(self, mouse=None, key=None):
         # initialize the console
         # set the font, and consoles
         libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
@@ -41,11 +54,15 @@ class Screen:
         self.color_light_wall = libtcod.Color(130, 110, 50)
         self.color_light_ground = libtcod.Color(200, 180, 50)
 
+        # set the fov initially to None.  This will be generated properly when the map is rendered
         self.fov_map = None
         self.fov_recompute = False
 
+        # set the mous and keyboard capture vars
         self.mouse = mouse
         self.key = key
+
+        # set the message console
         self.game_msgs = []
 
     #########################################################################
@@ -82,8 +99,10 @@ class Screen:
                                  name + ': ' + str(value) + '/' + str(maximum))
 
     def render_all(self, map):
+        #render the whole screen, including the bar, fov and map
         objects = map.objects
         player = map.player
+
         if self.fov_recompute:
             #recompute FOV if needed (the player moved or something)
             fov_recompute = False
@@ -111,10 +130,12 @@ class Screen:
                     else:
                         libtcod.console_set_char_background(self.con, x, y, self.color_light_ground, libtcod.BKGND_SET)
                     map.map[x][y].explored = True
-                    #draw all objects in the list
+        
+        #draw all objects in the list
         for object in objects:
             if object != player:
                 object.draw(self.fov_map, self.con, map)
+            # draw the player last, to ensure it ends up on top of other objects
             player.draw(self.fov_map, self.con, map)
 
         #blit the contents of the "con" to the root console
@@ -147,7 +168,6 @@ class Screen:
         libtcod.console_blit(self.panel, 0, 0, self.SCREEN_WIDTH, self.PANEL_HEIGHT, 0, 0, self.PANEL_Y)
 
     def get_names_under_mouse(self, objects):
-
         #return a string with the names of all objects under the mouse
         (x, y) = (self.mouse.cx, self.mouse.cy)
 
@@ -155,14 +175,18 @@ class Screen:
         names = [obj.name for obj in objects
                  if obj.x == x and obj.y == y and libtcod.map_is_in_fov(self.fov_map, obj.x, obj.y)]
 
-        names = ', '.join(names) #join the names, separated by commas
+        #join the names, separated by commas
+        names = ', '.join(names) 
         return names.capitalize()
 
     #########################################################################
     # Input Section
     #########################################################################
     def handle_keys(self, game_state, player, objects, map):
+        #take keyboard input and determine what to do with it
         key = self.key
+
+        #special cases for fullscreen and quitting
         if key.vk == libtcod.KEY_ENTER and key.lalt:
             libtcod.console_set_fullself(not libtcod.console_is_fullself())
         elif key.vk == libtcod.KEY_ESCAPE:
@@ -191,6 +215,7 @@ class Screen:
             else:
                 #test for other keys
                 key_char = chr(key.c)
+
                 if key_char == 'd':
                     #show the inventory; if an item is selected, drop it
                     chosen_item = self.inventory_menu(player.inventory,
@@ -208,6 +233,7 @@ class Screen:
                             player.pick_up_item(object, self)
                             objects.remove(object)
                             break
+
                 if key_char == 'i':
                     #show the inventory
                     chosen_item = self.inventory_menu(player.inventory,
@@ -222,6 +248,8 @@ class Screen:
 
                 if key_char == 'c':
                     #show character information
+
+                    # determine the player's xp progression
                     level_up_xp = character_classes.BaseCharacterClass.LEVEL_UP_BASE + player.level * character_classes.BaseCharacterClass.LEVEL_UP_FACTOR
                     self.msgbox('Character Information\n\nLevel: ' + str(player.level) + '\nExperience: ' + str(
                         player.xp) + '\nExperience to level up: ' + str(
@@ -230,6 +258,7 @@ class Screen:
                         player.character_class.power) + '\nDefense: ' + str(
                         player.character_class.defense), self.CHARACTER_SCREEN_WIDTH)
 
+                # no keys pressed
                 return 'didnt-take-turn'
 
 
@@ -238,31 +267,27 @@ class Screen:
     ###############################################################################
     def target_tile(self, max_range=None):
         #return the position of a tile left-clicked in player's FOV (optionally a range), or (None, None) if right-clicked
-        key = self.key
-        mouse = self.mouse
         while True:
             #render the self.  this erases the inventory and show the name of objects under the mouse
             libtcod.console_flush()
-            libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, key, mouse)
+            libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, self.key, self.mouse)
             self.render_all()
 
             (x, y) = (mouse.cx, mouse.cy)
 
+
             if mouse.lbutton_pressed and libtcod.map_is_in_fov(self.fov_map, x, y) and (
                         max_range is None or self.player.distance(x, y) <= max_range):
+                #if the player left clicked on something, and it's within range, return the coordinates
                 return x, y
 
-            if mouse.rbutton_pressed or key.vk == libtcod.KEY_ESCAPE:
-                return None, None #cancel if the player right-clicked or pressed Escape
+            if self.mouse.rbutton_pressed or self.key.vk == libtcod.KEY_ESCAPE:
+                #cancel if the player right-clicked or pressed Escape
+                return None, None 
 
-
-    
-
-
-    #Constants
-    #Item Menu Constants
-    INVENTORY_WIDTH = 50
-
+    ###############################################################################
+    # Menu methods
+    ###############################################################################
     def menu(self, header, options, width):
         #check to see if there's more than 26 options
         if len(options) > 26: raise ValueError('Cannot have a menu with more than 26 options')
@@ -331,4 +356,5 @@ class Screen:
         return inventory[index]
     
     def msgbox(self, text, width=50):
+        # send a message to the menu to display it as a popup on screen
         self.menu(text, [], width)
