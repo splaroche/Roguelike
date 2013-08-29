@@ -262,9 +262,6 @@ class Screen:
                 return 'didnt-take-turn'
 
 
-    ###############################################################################
-    # Target methods
-    ###############################################################################
     def target_tile(self, max_range=None):
         #return the position of a tile left-clicked in player's FOV (optionally a range), or (None, None) if right-clicked
         while True:
