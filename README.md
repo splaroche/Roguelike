@@ -11,12 +11,19 @@ To run, simply download the source and run main.py.
 
 Keys:
 
-|Key||
-|The arrow keys| Control movement
-|(i)|Opens the inventory and you can use the item selected.
-|(d)|Opens the inventory and drops the item selected.
-|(g)|Picks up an item from the ground
-|(<) or (,)|Will take you down stairs (represented by < on the map)
-|(c)|Opens the character menu
-|ESC|Closes the program
-|ALT + Enter|Go fullscreen
+Key
+The arrow keys| Control movement  
+
+(i) Opens the inventory and you can use the item selected.  
+
+(d) Opens the inventory and drops the item selected.  
+
+(g) Picks up an item from the ground  
+
+(<) or (,) Will take you down stairs (represented by < on the map)  
+
+(c) Opens the character menu  
+
+ESC Closes the program  
+
+ALT + Enter Go fullscreen  
