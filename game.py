@@ -14,18 +14,21 @@ class Game:
         self.map = GameMap()
         self.screen = Screen()
         self.map.screen = self.screen
+    
+    def initialize_new_player(self):
+        fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
+        self.player = Player(self.map.orig_player_x, self.map.orig_player_y, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component, screen=self.screen)
+        self.player.level = 1
+        self.map.player = self.player
+        self.map.objects.append(self.player)
+    
     ####################################################################################################
     # Game Initialization Methods
     ####################################################################################################
     def new_game(self):
 
         #create object representing the player
-        fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
-        self.player = Player(0, 0, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component, screen=self.screen)
-        self.player.level = 1
-        self.map.player = self.player
-        self.map.objects.append(self.player)
-       
+        self.initialize_new_player()       
 
         #set the dungeon level
 
@@ -82,13 +85,10 @@ class Game:
                             self.player.always_visible = False
                             
                             #create a new player, set it at the original start of the dungeon
-                            #assign the player object to it and add it to the objects tree.
-                            fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
-                            self.player = Player(self.map.orig_player_x, self.map.orig_player_y, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component, screen=self.screen)
-                            self.player.level = 1
-                            self.map.player = self.player
-                            self.map.objects.append(self.player)
-                            
+                            #assign the player object to it and add it to the objects tree.                            
+                            self.initialize_new_player()
+                            #update the creatures player bindings
+                            self.map.update_player_bindings()
 
             if self.player_action == 'exit':
                 self.save_game()

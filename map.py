@@ -205,7 +205,7 @@ class GameMap:
     def next_level(self):
         #advance to the next level
         self.screen.message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
-        creatures.Player.get_instance().fighter.heal_self(Player.get_instance().fighter.max_hp / 2)
+        self.player.character_class.heal_self(self.player.character_class.max_hp / 2)
 
         self.screen.message('After a rare moment of peace, you descend deeper into the hear of the dungeon...', libtcod.red)
         self.dungeon_level += 1
@@ -266,9 +266,14 @@ class GameMap:
                 return None
 
             for obj in self.objects:
-                if obj.x == x and obj.y == y and obj is Creature and obj != self.player:
+                if obj.x == x and obj.y == y and isinstance(obj, creatures.Creature) and obj != self.player:
                     return obj
         
+        # Updates the monster bindings to point to the player.  Called when the player respawns
+        def update_player_bindings():
+            for object in self.objects:
+                if isinstance(obj, creatures.Creature) and obj != self.player:
+                    obj.character_class.player = self.player
 
 class Rect:
     #a rectangle on the map. used to characterize a room.
