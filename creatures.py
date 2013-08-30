@@ -102,17 +102,17 @@ class Creature(Object):
 class BasicMonster:
        
     #AI for a basic monster
-    def take_turn(self, player, screen) :
+    def take_turn(self, player, map) :
         #a basic monster takes its turn.  If you can see it, it can see you
         monster = self.owner        
-        if libtcod.map_is_in_fov(screen.fov_map, monster.x, monster.y):
+        if libtcod.map_is_in_fov(monster.screen.fov_map, monster.x, monster.y):
             #move towards player if far away
             if monster.distance_to(player) >= 2:
-                monster.move_towards(player.x, player.y)
+                monster.move_towards(player.x, player.y, map)
 
             #close enough, attack! (if the player is still alive.)
             elif player.character_class.hp > 0:
-                monster.character_class.attack(player)
+                return monster.character_class.attack(player)
 
 
 class ConfusedMonster:

@@ -37,14 +37,14 @@ class BaseCharacterClass:
     def attack(self, target):
         #a simple formula for attack damage
         damage = self.power - target.character_class.defense
-
+        game_state = None
         if damage > 0:
             #make the target take some damage
-            target.character_class.take_damage(damage)
+            game_state = target.character_class.take_damage(damage)
             self.screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
         else:
             self.screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' but it has no effect!')
-                    
+        return game_state
 
     def heal_self(self, amount):
         #heal by the given amount, without going over the maximum
@@ -58,13 +58,13 @@ class BaseCharacterClass:
             self.hp -= damage
 
         #check for death.  if there's a death function call it
+        game_state = None
         if self.hp <= 0:
-           game_state = self.owner.death()
+            game_state = self.owner.death()
 
         #yield experience to the player
         if self.player:
             self.player.xp += self.xp
-
         return game_state
     ##########################################################################################
     # Leveling Functions

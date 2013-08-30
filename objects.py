@@ -29,7 +29,7 @@ class Object:
             self.x += dx
             self.y += dy
 
-    def move_towards(self, target_x, target_y):
+    def move_towards(self, target_x, target_y, map):        
         #vector from this object to the target and distance
         dx = target_x - self.x
         dy = target_y - self.y
@@ -40,8 +40,7 @@ class Object:
         dx = int(round(dx / distance))
         dy = int(round(dy / distance))
         
-        self.x +=dx
-        self.y +=dy
+        self.move(dx, dy, map)
 
     def draw(self, fov_map, con, map):
         if (libtcod.map_is_in_fov(fov_map, self.x, self.y)) or (self.always_visible and map.map[self.x][self.y].explored):

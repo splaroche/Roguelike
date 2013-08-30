@@ -11,8 +11,7 @@ To run, simply download the source and run main.py.
 
 Keys:
 
-Key
-The arrow keys| Control movement  
+The arrow keys control movement  
 
 (i) Opens the inventory and you can use the item selected.  
 

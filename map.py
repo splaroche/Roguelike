@@ -14,7 +14,10 @@ class GameMap:
     ROOM_MAX_SIZE = 10
     ROOM_MIN_SIZE = 6
     MAX_ROOMS = 30
-
+    
+    orig_player_x = 0
+    orig_player_y = 0
+    
     def __init__(self):
         self.map = None
         self.objects = []
@@ -96,6 +99,8 @@ class GameMap:
                 if num_rooms == 0:
                     self.player.x = new_x
                     self.player.y = new_y
+                    self.orig_player_x = new_x
+                    self.orig_player_y = new_y
                 else:
                     #all rooms after the first:
                     #connect it to the previous room with a tunnel

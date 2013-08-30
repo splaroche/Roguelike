@@ -5,7 +5,6 @@ from creatures import Player, Creature
 from gui import Screen
 import libtcodpy as libtcod
 import shelve
-from character_classes import *
 class Game:
     def __init__(self):
         self.player = None
@@ -70,13 +69,31 @@ class Game:
             #let monsters take their turn
             if self.game_state == 'playing' and self.player_action != 'didnt-take-turn':
                 for object in self.map.objects:
-                    if isinstance(object, Creature) and object.name != 'player':                        
-                        object.ai.take_turn(self.player, self.screen)
+                    if isinstance(object, Creature) and object.name != 'player':
+                        #take monster turns and check to see if monsters have killed the player.
+                        gstate= object.ai.take_turn(self.player, self.map)
+                        
+                        #if monsters have killed the player, spawn a new player
+                        if gstate == 'dead':
+                            #the player has died!  change the player's name to dead body and 
+                            #allow other characters to go over it
+                            self.player.name = 'Dead body'
+                            self.player.blocks = False
+                            self.player.always_visible = False
+                            
+                            #create a new player, set it at the original start of the dungeon
+                            #assign the player object to it and add it to the objects tree.
+                            fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
+                            self.player = Player(self.map.orig_player_x, self.map.orig_player_y, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component, screen=self.screen)
+                            self.player.level = 1
+                            self.map.player = self.player
+                            self.map.objects.append(self.player)
+                            
 
             if self.player_action == 'exit':
                 self.save_game()
                 break
-
+        
 
     def save_game(self):
         #open a new empty shelve (possibly overwriting an old one) to write the game data
