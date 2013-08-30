@@ -31,7 +31,8 @@ class Creature(Object):
         self.screen = screen
         if self.screen:
             self.character_class.screen = screen
-
+        
+        self.dead = False
 
     def drop_item(self, item, screen):
         # special case if it's an equipped item
@@ -82,7 +83,7 @@ class Creature(Object):
     ####################################################################################################
     # Death Methods
     ####################################################################################################
-    def death(self):
+    def death(self, objects):
         #transform it into a nasty corpse! it doesn't block, can't be attacked and doesn't move
         self.screen.message(self.name.capitalize() + ' is dead! You gain ' + str(self.xp) + ' experience points!',
                 libtcod.orange)
@@ -92,7 +93,8 @@ class Creature(Object):
         self.character_class = None
         self.ai = None
         self.name = 'Remains of ' + self.name
-        self.send_to_back()
+        self.dead = True
+        self.send_to_back(objects)
 
 
 
@@ -112,7 +114,7 @@ class BasicMonster:
 
             #close enough, attack! (if the player is still alive.)
             elif player.character_class.hp > 0:
-                return monster.character_class.attack(player)
+                monster.character_class.attack(player, map.objects)
 
 
 class ConfusedMonster:
@@ -150,26 +152,30 @@ class Player(Creature):
         #try to find an attackable object there
         target = None
         for object in objects:
-            if object is Creature and object.name != player and object.x == x and object.y == y:
-                target = object
-                break
+            if isinstance(object,Creature) and object != self and object.x == x and object.y == y:
+                if not object.dead:
+                    target = object
+                    break
 
         #attack if target found, move otherwise
         if target is not None:
-            self.character_class.attack(target)
+            self.character_class.attack(target, objects)
             return False
         else:
             self.move(dx, dy, map)
             return True
 
     # Run when the player dies
-    def death(self):
+    def death(self, objects):
         #the game ended!
         self.screen.message('You died!', libtcod.red)        
 
         #for added effect, transform the player into a corpse!
         self.char = '%'
         self.color = libtcod.dark_red
-
-        #return a game state string
-        return 'dead'
+        
+        #set the dead flag
+        self.dead = True
+        
+        #draw it below other objects
+        self.send_to_back(objects)

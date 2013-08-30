@@ -72,12 +72,12 @@ class Game:
             #let monsters take their turn
             if self.game_state == 'playing' and self.player_action != 'didnt-take-turn':
                 for object in self.map.objects:
-                    if isinstance(object, Creature) and object.name != 'player':
+                    if isinstance(object, Creature) and object.name != 'player' and not object.dead:
                         #take monster turns and check to see if monsters have killed the player.
-                        gstate= object.ai.take_turn(self.player, self.map)
+                        object.ai.take_turn(self.player, self.map)
                         
                         #if monsters have killed the player, spawn a new player
-                        if gstate == 'dead':
+                        if self.player.dead:
                             #the player has died!  change the player's name to dead body and 
                             #allow other characters to go over it
                             self.player.name = 'Dead body'

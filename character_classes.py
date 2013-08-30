@@ -34,17 +34,16 @@ class BaseCharacterClass:
         bonus = sum(equipment.max_hp_bonus for equipment in self.owner.get_all_equipped())
         return self.base_max_hp + bonus
 
-    def attack(self, target):
+    def attack(self, target, objects):
         #a simple formula for attack damage
         damage = self.power - target.character_class.defense
-        game_state = None
         if damage > 0:
             #make the target take some damage
-            game_state = target.character_class.take_damage(damage)
+            target.character_class.take_damage(damage, objects)
             self.screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' for ' + str(damage) + ' hit points.')
         else:
             self.screen.message(self.owner.name.capitalize() + ' attacks ' + target.name + ' but it has no effect!')
-        return game_state
+        
 
     def heal_self(self, amount):
         #heal by the given amount, without going over the maximum
@@ -52,20 +51,19 @@ class BaseCharacterClass:
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
-    def take_damage(self, damage):
+    def take_damage(self, damage, objects):
         #apply damage if possible
         if damage > 0:
             self.hp -= damage
 
-        #check for death.  if there's a death function call it
-        game_state = None
+        #check for death.  if there's a death function call it      
         if self.hp <= 0:
-            game_state = self.owner.death()
+            self.owner.death(objects)
 
-        #yield experience to the player
-        if self.player:
-            self.player.xp += self.xp
-        return game_state
+            #yield experience to the player
+            if self.player:
+                self.player.xp += self.owner.xp
+        
     ##########################################################################################
     # Leveling Functions
     ##########################################################################################
