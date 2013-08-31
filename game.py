@@ -77,15 +77,10 @@ class Game:
                         object.ai.take_turn(self.player, self.map)
                         
                         #if monsters have killed the player, spawn a new player
+                        #set it at the original start of the dungeon
                         if self.player.dead:
-                            #the player has died!  change the player's name to dead body and 
-                            #allow other characters to go over it
-                            self.player.name = 'Dead body'
-                            self.player.blocks = False
-                            self.player.always_visible = False
                             
-                            #create a new player, set it at the original start of the dungeon
-                            #assign the player object to it and add it to the objects tree.                            
+                            #assign the player object and add it to the objects tree.                            
                             self.initialize_new_player()
                             #update the creatures player bindings
                             self.map.update_player_bindings()

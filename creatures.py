@@ -123,10 +123,10 @@ class ConfusedMonster:
         self.old_ai = old_ai
         self.num_turns = num_turns
 
-    def take_turn(self):
+    def take_turn(self, player, map):
         if self.num_turns > 0: #still confused
             #move in a random direction, and decrease the number of turns confused
-            self.owner.move(libtcod.random_get_int(0, -1, 1), libtcod.random_get_int(0, -1, 1))
+            self.owner.move(libtcod.random_get_int(0, -1, 1), libtcod.random_get_int(0, -1, 1), map)
             self.num_turns -= 1
         else: #restore the previous AI (this one will be deleted because it's not referenced anymore)
             self.owner.ai = self.old_ai
@@ -173,6 +173,9 @@ class Player(Creature):
         #for added effect, transform the player into a corpse!
         self.char = '%'
         self.color = libtcod.dark_red
+        self.name = 'Dead body'
+        self.blocks = False
+        self.always_visible = False
         
         #set the dead flag
         self.dead = True

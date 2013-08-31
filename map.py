@@ -170,12 +170,12 @@ class GameMap:
         #chance of each item (by default they have a chance of 0 at level 1, which then goes up)
         item_chances = {}
         item_chances['heal'] = 35 #healing potion always shows up, even if all other items have 0 chance
-        item_chances['lightning'] = self.from_dungeon_level([[25, 4]])
-        item_chances['fireball'] = self.from_dungeon_level([[25, 6]])
-        item_chances['confuse'] = self.from_dungeon_level([[10, 2]])
-        item_chances['sword'] = 25
+        item_chances['lightning'] = 15 #self.from_dungeon_level([[25, 4]])
+        item_chances['fireball'] = 25 #self.from_dungeon_level([[25, 6]])
+        item_chances['confuse'] = 25 #self.from_dungeon_level([[10, 2]])
+        item_chances['sword'] = 0
 
-        num_items = libtcod.random_get_int(0, 0, max_items)
+        num_items = 25#libtcod.random_get_int(0, 0, max_items)
 
         for i in range(num_items):
             #choose random spot for this item
@@ -185,6 +185,7 @@ class GameMap:
             #only place it if the tiles is not blocked
             if not self.is_blocked(x, y):
                 choice = self.random_choice(item_chances)
+                item = items.Item(x, y, '?','', libtcod.white)
                 if choice == 'heal':
                     #create a healing potion
                     item = items.Spell_Scroll(x, y, '!', 'healing potion', libtcod.violet, 'heal')
@@ -196,7 +197,7 @@ class GameMap:
                     item = items.Spell_Scroll(x, y, '#', 'scroll of fireball', libtcod.dark_orange, 'fireball')
                 elif choice == 'confuse':
                     #create a confuse scroll
-                    item = items.Spell_Scroll(x, y, '#', 'scroll of confusion', libtcod.light_blue, 'confuse')
+                    item = items.Spell_Scroll(x, y, '#', 'scroll of confusion', libtcod.light_blue, 'confusion')
                 elif choice == 'sword':                    #create a sword                    
                     item = items.Equipment(x, y, '/', 'sword', libtcod.sky, slot='right hand')
                 self.objects.append(item)
@@ -261,7 +262,7 @@ class GameMap:
     def target_monster(self, max_range=None):
         #returns a clicked monster inside FOV up to a range, or None if right-clicked
         while True:
-            (x, y) = self.screen.target_tile(max_range)
+            (x, y) = self.screen.target_tile(map=self, max_range=max_range)
             if x is None: #player cancelled
                 return None
 
@@ -269,11 +270,11 @@ class GameMap:
                 if obj.x == x and obj.y == y and isinstance(obj, creatures.Creature) and obj != self.player:
                     return obj
         
-        # Updates the monster bindings to point to the player.  Called when the player respawns
-        def update_player_bindings():
-            for object in self.objects:
-                if isinstance(obj, creatures.Creature) and obj != self.player:
-                    obj.character_class.player = self.player
+    # Updates the monster bindings to point to the player.  Called when the player respawns
+    def update_player_bindings(self):
+        for obj in self.objects:
+            if isinstance(obj, creatures.Creature) and obj != self.player:
+                obj.character_class.player = self.player
 
 class Rect:
     #a rectangle on the map. used to characterize a room.

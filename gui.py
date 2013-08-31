@@ -188,7 +188,7 @@ class Screen:
 
         #special cases for fullscreen and quitting
         if key.vk == libtcod.KEY_ENTER and key.lalt:
-            libtcod.console_set_fullself(not libtcod.console_is_fullself())
+            libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
         elif key.vk == libtcod.KEY_ESCAPE:
             return 'exit' #exit game
 
@@ -239,7 +239,7 @@ class Screen:
                     chosen_item = self.inventory_menu(player.inventory,
                         'Press the key next to an item to use it, or any other to cancel.\n')
                     if chosen_item is not None:
-                        chosen_item.use(self)
+                        chosen_item.use(self, map)
 
                 if key_char == '<' or key_char == ',':
                     #go down the stairs, if the player is on them
@@ -262,19 +262,19 @@ class Screen:
                 return 'didnt-take-turn'
 
 
-    def target_tile(self, max_range=None):
+    def target_tile(self, map, max_range=None):
         #return the position of a tile left-clicked in player's FOV (optionally a range), or (None, None) if right-clicked
         while True:
             #render the self.  this erases the inventory and show the name of objects under the mouse
             libtcod.console_flush()
             libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, self.key, self.mouse)
-            self.render_all()
+            self.render_all(map)
 
-            (x, y) = (mouse.cx, mouse.cy)
+            (x, y) = (self.mouse.cx, self.mouse.cy)
 
 
-            if mouse.lbutton_pressed and libtcod.map_is_in_fov(self.fov_map, x, y) and (
-                        max_range is None or self.player.distance(x, y) <= max_range):
+            if self.mouse.lbutton_pressed and libtcod.map_is_in_fov(self.fov_map, x, y) and (
+                        max_range is None or map.player.distance(x, y) <= max_range):
                 #if the player left clicked on something, and it's within range, return the coordinates
                 return x, y
 

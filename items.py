@@ -1,5 +1,5 @@
 import libtcodpy as libtcod
-import gui
+import gui, creatures
 from objects import Object
 __author__ = 'Steven'
 
@@ -27,7 +27,7 @@ class Equipment(Object):
 
         #equip object and show a message about it
         self.is_equipped = True
-        gui.Screen.get_instance().message('Equipped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
+        screen.message('Equipped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
 
     def dequip(self):
         #dequip object and show a message about it
@@ -44,7 +44,7 @@ class Item(Object):
         self.use_function = use_function        
 
   
-    def use(self, screen):
+    def use(self, screen, map=None):
 
         #special case: if the object has the Equipment component, the 'use' action it to equip/dequip
         if isinstance(self, Equipment) and self.owner.equipment:
@@ -53,10 +53,10 @@ class Item(Object):
 
         #just call the use_function if it is defined
         if self.use_function is None:
-            screen.message('The ' + self.owner.name + ' cannot be used.')
+            screen.message('The ' + self.name + ' cannot be used.')
         else:
-            if self.use_function(screen) != 'cancelled':
-                self.inventory.remove(self.owner) #destroy after use, unless it was cancelled for some reason
+            if self.use_function(screen, map) != 'cancelled':
+                self.owner.inventory.remove(self) #destroy after use, unless it was cancelled for some reason
 
 class Spell:
 
@@ -76,19 +76,19 @@ class Spell:
     ########################################################################################
     # Spell Static Casting Methods
     ########################################################################################
-    def cast_fireball(self):
+    def cast_fireball(self, screen, map):
         #ask the player for a target tile to throw a fireball at
-        Screen.get_instance().message('Left-click a target tile for the fireball, or right-click to cancel.', libtcod.light_cyan)
-        (x, y) = screen.target_tile()
-        Screen.get_instance().message('The fireball explodes, burning everything within ' + str(self.FIREBALL_RADIUS) + ' tiles!', libtcod.orange)
+        screen.message('Left-click a target tile for the fireball, or right-click to cancel.', libtcod.light_cyan)
+        (x, y) = screen.target_tile(map)
+        screen.message('The fireball explodes, burning everything within ' + str(self.FIREBALL_RADIUS) + ' tiles!', libtcod.orange)
+        
+        for obj in map.objects: #damage every fighter in range, including the player
+            if isinstance(obj, creatures.Creature) and obj.distance(x, y) <= self.FIREBALL_RADIUS:
+                screen.message('The ' + obj.name + ' gets burned for ' + str(self.FIREBALL_DAMAGE) + ' hit points!', libtcod.orange)                
+                obj.character_class.take_damage(self.LIGHTNING_DAMAGE, map.objects)
 
-        for obj in self.objects: #damage every fighter in range, including the player
-            if obj.distance(x, y) <= self.FIREBALL_RADIUS and obj.class_name:
-                Screen.get_instance().message('The ' + obj.name + ' gets burned for ' + str(self.FIREBALL_DAMAGE) + ' hit points!', libtcod.orange)
-                obj.character_class.take_damage(self.FIREBALL_DAMAGE)
 
-
-    def cast_heal(self, screen):
+    def cast_heal(self, screen, map):
         #heal the player
         if self.owner.character_class.hp == self.owner.character_class.max_hp:
             screen.message('You are already at full health!', libtcod.red)
@@ -98,42 +98,41 @@ class Spell:
         self.owner.character_class.heal_self(self.HEAL_AMOUNT)
 
 
-    def cast_lightning(self, screen):
+    def cast_lightning(self, screen, map):
         #find closest enemy (inside a maximum range) and damage it
-        monster = self.closest_monster(self.LIGHTNING_RANGE)
+        monster = self.closest_monster(self.LIGHTNING_RANGE, map.objects, screen)
         if monster is None: #no enemy found within maximum range
-            Screen.get_instance().message('No enemy is close enough to strike.', libtcod.red)
+            screen.message('No enemy is close enough to strike.', libtcod.red)
             return 'cancelled'
-
         #zap it!
         screen.message('A lightning bolt strikes the ' + monster.name + ' with a loud thunder! The damage is '
                 + str(self.LIGHTNING_DAMAGE) + ' hit points!', libtcod.light_blue)
-        monster.character_class.take_damage(self.LIGHTNING_DAMAGE)
+        monster.character_class.take_damage(self.LIGHTNING_DAMAGE, map.objects)
 
 
-    def cast_confusion(self, screen):
+    def cast_confusion(self, screen, map):
         #ask the player for a target to confuse
         screen.message('Left-click an enemy to confuse it, or right-click to cancel.', libtcod.light_cyan)
-        monster = Screen.get_instance().target_monster(self.CONFUSE_RANGE)
+        monster = map.target_monster(self.CONFUSE_RANGE)
 
         if monster is None: #no enemy found within maximum range
             return 'cancelled'
         else:
             old_ai = monster.ai
-            monster.ai = ConfusedMonster(old_ai, self.CONFUSE_NUM_TURNS)
+            monster.ai = creatures.ConfusedMonster(old_ai, self.CONFUSE_NUM_TURNS)
             monster.ai.owner = monster #tell the new component who owns it
             screen.message('The eyes of the ' + monster.name + ' look vacant, as he starts to stumble around!', libtcod.light_blue)
 
 
-    def closest_monster(self, max_range, objects):
+    def closest_monster(self, max_range, objects, screen):
         #find closest enemy, up to a maximum range, and in the player's FOV
         closest_enemy = None
         closest_dist = max_range + 1 #start with (slightly more than) maximum range
 
-        for object in self.objects:
-            if object is Creature and not object == Player.get_instance() and libtcod.map_is_in_fov(fov_map, object.x, object.y):
+        for object in objects:
+            if isinstance(object,creatures.Creature) and not object == self.owner and libtcod.map_is_in_fov(screen.fov_map, object.x, object.y):
                 #calculate distance between this object and the player
-                dist = Player.get_instance().distance_to(object)
+                dist = self.owner.distance_to(object)
                 if dist < closest_dist: #it's closer, so remember it
                     closest_enemy = object
                     closest_dist = dist
@@ -148,23 +147,25 @@ class Spell_Scroll(Item, Spell):
     def __init__(self, x, y, char, name, color, spell_name):     
         Item.__init__(self, x, y, char, name, color, use_function=None)
         self.spell_name = spell_name
-    
-    def use(self, screen):        
-        # 13-08-25: spell functions assignment is based on the spell_name.  This was done because
-        # assigning the use_function directly at creation time was causing shelve not to 
-        # save the objects list.  I hope to fix this, as it's a pain to add new spells.
-        if self.spell_name == 'heal':
-            if self.cast_heal(screen) != 'cancelled':
-                self.owner.inventory.remove(self)
-        elif self.spell_name == 'fireball':
-            self.use_function = self.cast_fireball(screen)
-        elif self.spell_name == 'lightning':
-            self.use_function = self.cast_lightning(screen)
-        elif self.spell_name =='confusion':
-            self.use_function = self.cast_confusion(screen)
-        #print self.use_function
+        self.use_function = getattr(self, 'cast_' + spell_name)
 
-        #if self.use_function(screen) != 'cancelled':
-         #   self.owner.inventory.remove(self.owner)
+    
+#     def use(self, screen):        
+#          13-08-25: spell functions assignment is based on the spell_name.  This was done because
+#          assigning the use_function directly at creation time was causing shelve not to 
+#          save the objects list.  I hope to fix this, as it's a pain to add new spells.
+#          if self.spell_name == 'heal':
+#              if self.cast_heal(screen) != 'cancelled':
+#                  self.owner.inventory.remove(self)
+#          elif self.spell_name == 'fireball':
+#              self.use_function = self.cast_fireball(screen)
+#          elif self.spell_name == 'lightning':
+#              self.use_function = self.cast_lightning(screen)
+#          elif self.spell_name =='confusion':
+#              self.use_function = self.cast_confusion(screen)
+#          #print self.use_function
+#  
+#         if self.use_function(screen) != 'cancelled':
+#             self.owner.inventory.remove(self)
 
 
