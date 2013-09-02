@@ -1,10 +1,17 @@
+#################################################################################
+# The map module contains classes that deal with objects the make up the map
+# or that appear on the map.
+# Note: The Object class should be here, but it's in its own module to prevent
+#       circular import issues.
+#################################################################################
 import creatures, items, gui, character_classes, objects
 import libtcodpy as libtcod
 __author__ = 'Steven'
 
-
+#################################################################################
+# The GameMap represents the dungeon map, and the objects associated with it.
+#################################################################################
 class GameMap:
-
     # FOV Constants
     FOV_ALGO = 0 #default
     FOV_LIGHT_WALLS = True
@@ -15,6 +22,8 @@ class GameMap:
     ROOM_MIN_SIZE = 6
     MAX_ROOMS = 30
     
+    #The original player position on the first level of the map.
+    #Used when the player respawns.
     orig_player_x = 0
     orig_player_y = 0
     
@@ -25,19 +34,23 @@ class GameMap:
         self.dungeon_level = 1
         self.player = None
         self.screen = None
+        
     ####################################################################################################
     # Room Creation
     ####################################################################################################
+    #Create a horizontal tunnel from point x1 to x2 on y.
     def create_h_tunnel(self, x1, x2, y):
         for x in range(min(x1, x2), max(x1, x2) + 1):
             self.map[x][y].blocked = False
             self.map[x][y].block_sight = False
 
+    #Create a vertical tunnel from point y1 to y2 on x.
     def create_v_tunnel(self, y1, y2, x):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.map[x][y].blocked = False
             self.map[x][y].block_sight = False
 
+    #Creates a room from a rectangle object.
     def create_room(self, room):
         #go through the tiles in the rectangle and make them passable
         for x in range(room.x1 + 1, room.x2):
@@ -48,6 +61,8 @@ class GameMap:
     ####################################################################################################
     # Map Methods
     ####################################################################################################
+    #Checks if the point is blocked, either because the map point is blocked, or there's a blockable 
+    #object in the point.
     def is_blocked(self, x, y):
         #first test the map tile
         if self.map[x][y].blocked:
@@ -59,7 +74,8 @@ class GameMap:
                 return True
 
         return False
-
+    
+    #Make the map.
     def make(self):
         
         #fill map with unblocked tiles
@@ -95,12 +111,17 @@ class GameMap:
 
                 #center coordinates of new room, will be useful
                 (new_x, new_y) = new_room.center()
-
+                
+                #if this is the first room, place the player.
                 if num_rooms == 0:
                     self.player.x = new_x
                     self.player.y = new_y
-                    self.orig_player_x = new_x
-                    self.orig_player_y = new_y
+                    
+                    #if dungeon level is 1, set the starting position so that the player can 
+                    #respawn when they die.
+                    if self.dungeon_level == 1:
+                        self.orig_player_x = new_x
+                        self.orig_player_y = new_y
                 else:
                     #all rooms after the first:
                     #connect it to the previous room with a tunnel
@@ -130,7 +151,8 @@ class GameMap:
         self.objects.append(self.stairs)
         self.stairs.send_to_back(self.objects)
 
-
+    #Place the objects on the map, including monsters and items
+    #NOTE: 09/02/13 - This method is being changed for better placement.
     def place_objects(self, room):
         # maximum number of monsters per room
         max_monsters = self.from_dungeon_level([[2, 1], [3, 4], [5, 6]])
@@ -170,12 +192,12 @@ class GameMap:
         #chance of each item (by default they have a chance of 0 at level 1, which then goes up)
         item_chances = {}
         item_chances['heal'] = 35 #healing potion always shows up, even if all other items have 0 chance
-        item_chances['lightning'] = 15 #self.from_dungeon_level([[25, 4]])
-        item_chances['fireball'] = 25 #self.from_dungeon_level([[25, 6]])
-        item_chances['confuse'] = 25 #self.from_dungeon_level([[10, 2]])
-        item_chances['sword'] = 0
+        item_chances['lightning'] = self.from_dungeon_level([[25, 4]])
+        item_chances['fireball'] = self.from_dungeon_level([[25, 6]])
+        item_chances['confuse'] = self.from_dungeon_level([[10, 2]])
+        item_chances['sword'] = self.from_dungeon_level([[10, 3]])
 
-        num_items = 25#libtcod.random_get_int(0, 0, max_items)
+        num_items = libtcod.random_get_int(0, 0, max_items)
 
         for i in range(num_items):
             #choose random spot for this item
@@ -203,24 +225,26 @@ class GameMap:
                 self.objects.append(item)
                 item.send_to_back(self.objects) # items appear below other objects
 
+    #Make the next map level and proceed to it.
     def next_level(self):
         #advance to the next level
         self.screen.message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
-        self.player.character_class.heal_self(self.player.character_class.max_hp / 2)
+        self.player.heal_self(self.player.character_class.max_hp / 2)
 
         self.screen.message('After a rare moment of peace, you descend deeper into the hear of the dungeon...', libtcod.red)
         self.dungeon_level += 1
-        self.make_map() #create a fresh level!
+        self.make() #create a fresh level!
 
         self.initialize_fov()
-
+    #Returns a value that depends on level.  The table specifies what value occurs after each level, default is 0
     def from_dungeon_level(self, table):
-        #returns a value that depends on level.  the table specifies what value occurs after each level, default is 0
+        
         for (value, level) in reversed(table):
             if self.dungeon_level >= level:
                 return value
         return 0
-
+    
+    #Creates a random index based on the list of chances.
     def random_choice_index(self, chances):
         #choose one option from list of chances, returning its index
         #the dice will land on some number between 1 and the sum of the chances
@@ -237,16 +261,15 @@ class GameMap:
                 return choice
             choice += 1
 
-
+    #Generates a random choice based on the passed in dictionary.
     def random_choice(self, chances_dict):
         #choose one option from dictionary of chances, returning its key
         chances = chances_dict.values()
         strings = chances_dict.keys()
 
         return strings[self.random_choice_index(chances)]
-
-
     
+    #Create the FOV and paint the screen with it.
     def initialize_fov(self):        
 
         libtcod.console_clear(self.screen.con) #unexplored areas start black
@@ -258,24 +281,43 @@ class GameMap:
             for x in range(self.screen.MAP_WIDTH):
                 libtcod.map_set_properties(self.screen.fov_map, x, y, not self.map[x][y].block_sight, not self.map[x][y].blocked)
 
-
-    def target_monster(self, max_range=None):
-        #returns a clicked monster inside FOV up to a range, or None if right-clicked
+    #Targets a monster. Returns a clicked monster inside FOV up to a range, or None if right-clicked  
+    def target_monster(self, max_range=None):        
         while True:
             (x, y) = self.screen.target_tile(map=self, max_range=max_range)
             if x is None: #player cancelled
                 return None
-
+            
             for obj in self.objects:
+                #if the object is a creature, return it.
                 if obj.x == x and obj.y == y and isinstance(obj, creatures.Creature) and obj != self.player:
                     return obj
-        
-    # Updates the monster bindings to point to the player.  Called when the player respawns
+                
+    #Returns the closest monster to the player. 
+    def closest_monster(self, max_range):
+        #find closest enemy, up to a maximum range, and in the player's FOV
+        closest_enemy = None
+        closest_dist = max_range + 1 #start with (slightly more than) maximum range
+
+        for object in self.objects:
+            #check that the object is a monster and visible.
+            if isinstance(object,creatures.Creature) and not object == self.owner and libtcod.map_is_in_fov(self.screen.fov_map, object.x, object.y):
+                #calculate distance between this object and the player
+                dist = self.player.distance_to(object)
+                if dist < closest_dist: #it's closer, so remember it
+                    closest_enemy = object
+                    closest_dist = dist
+        return closest_enemy
+
+    #Updates the monster bindings to point to the player.  Called when the player respawns
     def update_player_bindings(self):
         for obj in self.objects:
             if isinstance(obj, creatures.Creature) and obj != self.player and obj.character_class is not None: 
-                obj.character_class.player = self.player
+                obj.player = self.player
 
+#################################################################################
+# Rectangle class is used for room creation.
+#################################################################################
 class Rect:
     #a rectangle on the map. used to characterize a room.
     def __init__(self, x, y, w, h):
@@ -283,7 +325,7 @@ class Rect:
         self.y1 = y
         self.x2 = x + w
         self.y2 = y + h
-
+    
     def center(self):
         center_x = (self.x1 + self.x2) / 2
         center_y = (self.y1 + self.y2) / 2
@@ -294,7 +336,9 @@ class Rect:
         return (self.x1 <= other.x2 and self.x2 >= other.x1 and
                 self.y1 <= other.y2 and self.y2 >= other.y2)
 
-
+#################################################################################
+# A Tile represents a point on the map.
+#################################################################################
 class Tile:
     # a tile of the map
     def __init__(self, blocked, block_sight=None):

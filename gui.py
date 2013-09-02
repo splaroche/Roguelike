@@ -2,9 +2,9 @@
 # The GUI module contains any classes directly affecting screen rendering.
 ###########################################################################################
 
-import textwrap, inspect
+import textwrap
 import libtcodpy as libtcod
-import character_classes, items
+import items
 __author__ = 'Steven'
 
 ###########################################################################################
