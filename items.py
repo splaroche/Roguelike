@@ -4,6 +4,8 @@ from objects import Object
 __author__ = 'Steven'
 
 class Equipment(Object):
+
+    
     #an object that can be equipped, yielding bonuses.  automatically adds the Item component.
     def __init__(self, x, y, char, name, color, slot, power_bonus=0, defense_bonus=0, max_hp_bonus=0):
         Object.__init__(self, x, y, char, name, color, blocks=False, always_visible=False)        
@@ -13,12 +15,14 @@ class Equipment(Object):
         self.defense_bonus = defense_bonus
         self.max_hp_bonus = max_hp_bonus
 
+    #equip or dequip an item
     def toggle_equip(self): #toggle equip/dequip status
         if self.is_equipped:
             self.dequip()
         else:
             self.equip()
 
+    #equip an item.  if there's another item currently in that slot, replace it.
     def equip(self):
         #if the slot is already being used, dequip whatever is there first
         old_equipment = self.owner.get_equipped_in_slot(self.slot)
@@ -27,13 +31,22 @@ class Equipment(Object):
 
         #equip object and show a message about it
         self.is_equipped = True
-        screen.message('Equipped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
+        #remove it from inventory and add it to equipment
+        self.owner.inventory.remove(self)
+        self.owner.equipment[self.slot] = self
+        self.owner.screen.message('Equipped ' + self.owner.name + ' on ' + self.slot + '.', libtcod.light_green)
 
+    #dequip an item
     def dequip(self):
         #dequip object and show a message about it
         if not self.is_equipped: return
         self.is_equipped = False
-        screen.message('Dequipped ' + self.owner.name + ' from ' + self.slot + '.', libtcod.light_yellow)
+        
+        #remove from equipment and add to inventory
+        self.owner.equipment[self.slot] = None
+        self.owner.inventory.add(self)
+        
+        self.owner.screen.message('Dequipped ' + self.owner.name + ' from ' + self.slot + '.', libtcod.light_yellow)
 
 
 
@@ -147,25 +160,10 @@ class Spell_Scroll(Item, Spell):
     def __init__(self, x, y, char, name, color, spell_name):     
         Item.__init__(self, x, y, char, name, color, use_function=None)
         self.spell_name = spell_name
-        self.use_function = getattr(self, 'cast_' + spell_name)
 
     
-#     def use(self, screen):        
-#          13-08-25: spell functions assignment is based on the spell_name.  This was done because
-#          assigning the use_function directly at creation time was causing shelve not to 
-#          save the objects list.  I hope to fix this, as it's a pain to add new spells.
-#          if self.spell_name == 'heal':
-#              if self.cast_heal(screen) != 'cancelled':
-#                  self.owner.inventory.remove(self)
-#          elif self.spell_name == 'fireball':
-#              self.use_function = self.cast_fireball(screen)
-#          elif self.spell_name == 'lightning':
-#              self.use_function = self.cast_lightning(screen)
-#          elif self.spell_name =='confusion':
-#              self.use_function = self.cast_confusion(screen)
-#          #print self.use_function
-#  
-#         if self.use_function(screen) != 'cancelled':
-#             self.owner.inventory.remove(self)
+    def use(self, screen, map):                  
+        if getattr(self, 'cast_' + self.spell_name)(screen, map) != 'cancelled':
+            self.owner.inventory.remove(self)
 
 

@@ -6,7 +6,8 @@ import items
 
 # the creature inherits from Object
 class Creature(Object):
-
+    
+    
     def __init__(self, x, y, char, name, color, blocks=True, ai=None, item=None, always_visible=False,
                  equipment=None, character_class=None, creature_type=None, xp=0, screen=None):
         Object.__init__(self, x, y, char, name, color, blocks=blocks, always_visible=always_visible)
@@ -15,7 +16,7 @@ class Creature(Object):
         if self.character_class:
             # let the fighter component know who owns it
             self.character_class.owner = self
-
+        
         self.ai = ai
         if self.ai:
             # let the ai component know who owns it
@@ -25,7 +26,6 @@ class Creature(Object):
         if self.item:
             self.item.owner = self
 
-        self.equipment = equipment
         self.inventory = []
 
         self.screen = screen
@@ -33,7 +33,10 @@ class Creature(Object):
             self.character_class.screen = screen
         
         self.dead = False
-
+        
+        self.level = 1
+        self.equipment = {'head': None, 'body':None, 'legs':None, 'hands':None, 'feet':None, 'left hand': None, 'right hand': None}
+        
     def drop_item(self, item, screen):
         # special case if it's an equipped item
         if isinstance(item, items.Equipment) and item.is_equipped:
@@ -70,13 +73,10 @@ class Creature(Object):
                 return obj.equipment
         return None
 
-    def get_all_equipped(self):  #returns a list of equipped items        
-        equipped_list = []
-        if self.equipment:
-            for item in self.equipment:
-                if item.is_equipped:
-                    equipped_list.append(item.equipment)
-        return equipped_list
+    def get_all_equipped(self):  #returns a list of equipped items
+        return [v for k, v in self.equipment.iteritems() if v is not None]
+    
+    
     
 
 
@@ -165,6 +165,24 @@ class Player(Creature):
             self.move(dx, dy, map)
             return True
 
+    def character_screen(self):
+        
+        # determine the player's xp progression
+        level_up_xp = self.character_class.LEVEL_UP_BASE + self.level * self.character_class.LEVEL_UP_FACTOR
+                    
+        char_screen = 'Character Information\n\nLevel: ' + str(self.level) + '\nExperience: ' + str(
+                        self.xp) + '\nExperience to level up: ' + str(
+                        level_up_xp) + '\n\nMaximum HP: ' + str(
+                        self.character_class.max_hp) + '\nAttack: ' + str(
+                        self.character_class.power) + '\nDefense: ' + str(
+                        self.character_class.defense) + '\n\nEquipped Items: '
+                        
+        l = self.get_all_equipped()
+        for item in l:
+            char_screen += '\n' + item.slot.capitalize() + ': ' + item.name.capitalize()
+             
+        return char_screen
+                        
     # Run when the player dies
     def death(self, objects):
         #the game ended!

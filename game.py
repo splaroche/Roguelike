@@ -4,7 +4,7 @@ from character_classes import BaseCharacterClass
 from creatures import Player, Creature
 from gui import Screen
 import libtcodpy as libtcod
-import shelve
+import shelve, pickle, items
 class Game:
     def __init__(self):
         self.player = None
@@ -18,7 +18,8 @@ class Game:
     def initialize_new_player(self):
         fighter_component = BaseCharacterClass(hp=100, defense=1, power=4)
         self.player = Player(self.map.orig_player_x, self.map.orig_player_y, '@', 'player', libtcod.white, blocks=True, character_class=fighter_component, screen=self.screen)
-        self.player.level = 1
+        self.player.equipment['right hand'] = items.Equipment(0, 0, '/', 'sword', libtcod.light_blue, 'right hand', power_bonus=2)
+        
         self.map.player = self.player
         self.map.objects.append(self.player)
     
@@ -68,7 +69,10 @@ class Game:
             for object in self.map.objects:
                 object.clear(self.screen.con)
             self.player_action = self.screen.handle_keys(self.game_state, self.player, self.map.objects, self.map)
-
+            #exit the game if the player select so
+            if self.player_action == 'exit':
+                self.save_game()
+                break
             #let monsters take their turn
             if self.game_state == 'playing' and self.player_action != 'didnt-take-turn':
                 for object in self.map.objects:
@@ -85,41 +89,62 @@ class Game:
                             #update the creatures player bindings
                             self.map.update_player_bindings()
 
-            if self.player_action == 'exit':
-                self.save_game()
-                break
         
 
     def save_game(self):
         #open a new empty shelve (possibly overwriting an old one) to write the game data
-        file = shelve.open('savegame', 'n')
-        file['map'] = self.map.map
-        file['objects'] =self.map.objects
-        file['player_index'] = self.map.objects.index(self.player)
-        file['inventory'] = self.inventory
+#         file = open('savegame.sav', 'wb')
+#         pickle.dump(self.map, file)
+#         pickle.dump(self.map.objects, file)
+#         pickle.dump(self.player, file)
+#         pickle.dump(self.screen, file)
+#         pickle.dump(self.screen.game_msgs, file)
+#         pickle.dump(self.screen.fov_recompute, file)
+#         pickle.dump(self.screen.fov_map, file)
+#         pickle.dump(self.game_state, file)
+#         pickle.dump(self.map.stairs, file)
+        file = shelve.open('savegame.s', 'n')
+        file['map'] = self.map
+        file['objects'] = self.map.objects
+        file['player'] = self.player
         file['game_msgs'] = self.screen.game_msgs
+        file['fov_map'] = self.screen.fov_map
+        file['fov_recompute'] = self.screen.fov_recompute
         file['game_state'] = self.game_state
-        file['dungeon_level'] = self.map.dungeon_level
-        file['stairs_index'] = self.map.objects.index(self.map.stairs)
+        file['stairs'] = self.map.stairs
         file.close()
 
 
     def load_game(self):
         #open the previously saved shelve and load the game data
-        file = shelve.open('savegame', 'r')
-        self.map.map = file['map']
+#        file = open('savegame.sav', 'rb')
+#         self.map = pickle.load(file)
+#         self.map.objects = pickle.load(file)
+#         self.player = pickle.load(file)
+#         self.map.player = self.player        
+#         self.screen = Screen()
+#         self.screen.game_msgs = pickle.load(file)
+#         self.screen.fov_map = pickle.load(file)
+#         self.screen.fov_recompute = pickle.load(file)
+#         self.game_state = pickle.load(file)
+#         self.map.stairs = pickle.load(file)
+        file = shelve.open('savegame.s', 'r')
+        self.map = file['map']
         self.map.objects = file['objects']
-        self.player =self.map.objects[file['player_index']]
-        self.map.player = player
-        self.inventory = file['inventory']
+        self.player = file['player']
+        self.screen.fov_map = file['fov_map']
+        self.screen.fov_recompute = file['fov_recompute']
         self.screen.game_msgs = file['game_msgs']
         self.game_state = file['game_state']
-        self.map.dungeon_level = file['dungeon_level']
-        self.map.stairs = self.map.objects[file['stairs_index']]
+        self.map.stairs = file['stairs']
+               
         file.close()
-
-        self.initialize_fov()
-
+        self.map.player = self.player
+        self.map.screen = self.screen
+        self.map.update_player_bindings()
+        self.map.initialize_fov()
+        libtcod.sys_set_fps(self.screen.LIMIT_FPS)
+                
     def main_menu(self):
         img = libtcod.image_load('menu_background.png')        
         while not libtcod.console_is_window_closed():

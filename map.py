@@ -273,7 +273,7 @@ class GameMap:
     # Updates the monster bindings to point to the player.  Called when the player respawns
     def update_player_bindings(self):
         for obj in self.objects:
-            if isinstance(obj, creatures.Creature) and obj != self.player:
+            if isinstance(obj, creatures.Creature) and obj != self.player and obj.character_class is not None: 
                 obj.character_class.player = self.player
 
 class Rect:

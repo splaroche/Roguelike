@@ -249,14 +249,7 @@ class Screen:
                 if key_char == 'c':
                     #show character information
 
-                    # determine the player's xp progression
-                    level_up_xp = character_classes.BaseCharacterClass.LEVEL_UP_BASE + player.level * character_classes.BaseCharacterClass.LEVEL_UP_FACTOR
-                    self.msgbox('Character Information\n\nLevel: ' + str(player.level) + '\nExperience: ' + str(
-                        player.xp) + '\nExperience to level up: ' + str(
-                        level_up_xp) + '\n\nMaximum HP: ' + str(
-                        player.character_class.max_hp) + '\nAttack: ' + str(
-                        player.character_class.power) + '\nDefense: ' + str(
-                        player.character_class.defense), self.CHARACTER_SCREEN_WIDTH)
+                    self.msgbox(player.character_screen(), self.CHARACTER_SCREEN_WIDTH)
 
                 # no keys pressed
                 return 'didnt-take-turn'
