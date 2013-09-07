@@ -36,6 +36,7 @@ class Creature(Object):
         self.inventory = []        
         #set the default equipment dictionary.
         self.equipment = {'head': None, 'body':None, 'legs':None, 'hands':None, 'feet':None, 'left hand': None, 'right hand': None}
+        self.player = None
         
     #Drops the item selected in the drop inventory item screen.
     def drop_item(self, item, screen):
@@ -108,11 +109,11 @@ class Creature(Object):
 
         #check for death.  call the death function    
         if self.character_class.hp <= 0:
-            self.owner.death(objects)
+            self.death(objects)
 
             #yield experience to the player
             if self.player:
-                self.player.xp += self.owner.xp
+                self.player.xp += self.xp
     
     #Checks and levels up the Creature
     def check_level_up(self):
@@ -145,7 +146,7 @@ class Creature(Object):
 # The player class stores all the player details.  It inherits from the Creature
 # class, but contains specific player related methods. 
 #################################################################################
-class Player(Creature):    
+class Player(Creature):            
     def __init__(self, x, y, char, name, color, character_class, blocks=True, equipment=[], screen=None):
         # call the super constructor
         Creature.__init__(self, x=x, y=y, char=char, name=name, color=color, blocks=True, ai=None, always_visible=True, 
@@ -178,9 +179,9 @@ class Player(Creature):
     def character_screen(self):
         
         # determine the player's xp progression
-        level_up_xp = self.character_class.LEVEL_UP_BASE + self.level * self.character_class.LEVEL_UP_FACTOR
+        level_up_xp = self.character_class.LEVEL_UP_BASE + self.character_class.level * self.character_class.LEVEL_UP_FACTOR
                     
-        char_screen = 'Character Information\n\nLevel: ' + str(self.level) + '\nExperience: ' + str(
+        char_screen = 'Character Information\n\nLevel: ' + str(self.character_class.level) + '\nExperience: ' + str(
                         self.xp) + '\nExperience to level up: ' + str(
                         level_up_xp) + '\n\nMaximum HP: ' + str(
                         self.character_class.max_hp) + '\nAttack: ' + str(

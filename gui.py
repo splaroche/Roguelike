@@ -243,9 +243,14 @@ class Screen:
 
                 if key_char == '<' or key_char == ',':
                     #go down the stairs, if the player is on them
-                    if map.stairs.x == player.x and map.stairs.y == player.y:
-                        self.map.next_level()
-
+                    if map.check_stairs_loc():
+                        map.next_level()
+                
+                if key_char == '>' or key_char == '.':
+                    #go down the stairs, if the player is on them
+                    if map.check_stairs_loc():
+                        map.prev_level()
+                
                 if key_char == 'c':
                     #show character information
 

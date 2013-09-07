@@ -177,3 +177,12 @@ class Game:
                 self.play_game()
             elif choice == 2: #quit
                 break
+            
+    def respawn_player(self):
+        #assign the player object and add it to the objects tree.                            
+        self.initialize_new_player()
+        #update the creatures player bindings
+        self.map.update_player_bindings()
+        #set the dungeone_level back to the entrance
+        self.map.dungeon_level = 1
+        

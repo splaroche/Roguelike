@@ -27,14 +27,30 @@ class GameMap:
     orig_player_x = 0
     orig_player_y = 0
     
+    levels = {}
+    
     def __init__(self):
-        self.map = None
-        self.objects = []
-        self.stairs = None
+        self.level_objects = {}
+        self.level_stairs = {}
+        #create the level objects list for dungeon level 1
+        self.level_objects[1] = []
+        self.level_stairs[1] = []
         self.dungeon_level = 1
         self.player = None
         self.screen = None
         
+    @property
+    def stairs(self):
+        return self.level_stairs[self.dungeon_level]
+    @property
+    def objects(self):
+        return self.level_objects[self.dungeon_level]
+    
+    @property
+    def map(self):        
+        if self.levels.has_key(self.dungeon_level):
+            return self.levels[self.dungeon_level]
+        return None
     ####################################################################################################
     # Room Creation
     ####################################################################################################
@@ -75,155 +91,180 @@ class GameMap:
 
         return False
     
+    def create_random_rectangle(self):
+        #random width and height
+        w = libtcod.random_get_int(0, self.ROOM_MIN_SIZE, self.ROOM_MAX_SIZE)
+        h = libtcod.random_get_int(0, self.ROOM_MIN_SIZE, self.ROOM_MAX_SIZE)
+        #random position without going out of the boundaries of the map
+        x = libtcod.random_get_int(0, 0, gui.Screen.MAP_WIDTH - w - 1)
+        y = libtcod.random_get_int(0, 0, gui.Screen.MAP_HEIGHT - h - 1)
+
+        return Rect(x, y, w, h)
+        
+    def create_rooms(self):        
+        rooms = []
+        for r in range(self.MAX_ROOMS):
+            new_room = self.create_random_rectangle()
+            intersect = self.check_for_intersection(rooms, new_room)
+            if not intersect:                
+            #if len(rooms) == 0:
+            ##   rooms.append(new_room)             
+            #   intersect = False
+            #print intersect
+               #this means there are no intersections, so this room is valid
+    
+                #"paint" it to the map's tiles
+                self.create_room(new_room)
+    
+                #center coordinates of new room, will be useful
+                (new_x, new_y) = new_room.center()
+                
+                if len(rooms)== 0:
+                    self.create_first_room(new_x, new_y)
+                else:
+                    self.create_other_room(new_x, new_y, rooms[len(rooms) - 1])
+                    
+                rooms.append(new_room)
+                             
+        
+        #create stairs at the center of the last room
+        self.create_stairs(new_x, new_y)
+        return rooms        
+        
+    def create_other_room(self, x, y, prev_room):
+        #all prev_room after the first:
+        #connect it to the previous room with a tunnel
+
+        #center coordinates of previous room
+        (prev_x, prev_y) = prev_room.center()
+
+        #draw a coin
+        if libtcod.random_get_int(0, 0, 1) == 1:
+            #first move horizontally, then vertically
+            self.create_h_tunnel(prev_x, x, prev_y)
+            self.create_v_tunnel(prev_y, y, x)
+        else:
+            #first move vertically, then horizontally
+            self.create_v_tunnel(prev_y, y, prev_x)
+            self.create_h_tunnel(prev_x, x, y)
+            
+    
+    def create_first_room(self, x, y):
+        self.player.x = x
+        self.player.y = y
+        
+        #if dungeon level is 1, set the starting position so that the player can 
+        #respawn when they die.        
+        if self.dungeon_level == 1:                        
+            self.orig_player_x = x
+            self.orig_player_y = y
+        else:
+            print self.dungeon_level
+            #create the stairs back up to the previous level beside the player
+            self.create_stairs(x - 1 , y, upstairs=True)
+            
+    def check_for_intersection(self,rooms, new_room):
+        #run through the other rooms and see if they intersect with this one
+        for r in rooms:
+            if r.intersect(new_room):
+                return True            
+        return False
+    
     #Make the map.
     def make(self):
         
         #fill map with unblocked tiles
-        self.map = [[Tile(True)
+        self.levels[self.dungeon_level] = [[Tile(True)
                 for y in range(gui.Screen.MAP_HEIGHT)]
                for x in range(gui.Screen.MAP_WIDTH)]
+        rooms = self.create_rooms()        
+        self.place_objects(rooms)
 
-        #create rooms
-        rooms = []
-        num_rooms = 0
-        for r in range(self.MAX_ROOMS):
-            #random width and height
-            w = libtcod.random_get_int(0, self.ROOM_MIN_SIZE, self.ROOM_MAX_SIZE)
-            h = libtcod.random_get_int(0, self.ROOM_MIN_SIZE, self.ROOM_MAX_SIZE)
-            #random position without going out of the boundaries of the map
-            x = libtcod.random_get_int(0, 0, gui.Screen.MAP_WIDTH - w - 1)
-            y = libtcod.random_get_int(0, 0, gui.Screen.MAP_HEIGHT - h - 1)
-
-            new_room = Rect(x, y, w, h)
-
-            #run through the other rooms and see if they intersect with this one
-            failed = False
-            for other_room in rooms:
-                if new_room.intersect(other_room):
-                    failed = True
-                    break
-
-            if not failed:
-                #this means there are no intersections, so this room is valid
-
-                #"paint" it to the map's tiles
-                self.create_room(new_room)
-
-                #center coordinates of new room, will be useful
-                (new_x, new_y) = new_room.center()
-                
-                #if this is the first room, place the player.
-                if num_rooms == 0:
-                    self.player.x = new_x
-                    self.player.y = new_y
-                    
-                    #if dungeon level is 1, set the starting position so that the player can 
-                    #respawn when they die.
-                    if self.dungeon_level == 1:
-                        self.orig_player_x = new_x
-                        self.orig_player_y = new_y
-                else:
-                    #all rooms after the first:
-                    #connect it to the previous room with a tunnel
-
-                    #center coordinates of previous room
-                    (prev_x, prev_y) = rooms[num_rooms - 1].center()
-
-                    #draw a coin
-                    if libtcod.random_get_int(0, 0, 1) == 1:
-                        #first move horizontally, then vertically
-                        self.create_h_tunnel(prev_x, new_x, prev_y)
-                        self.create_v_tunnel(prev_y, new_y, new_x)
-                    else:
-                        #first move vertically, then horizontally
-                        self.create_v_tunnel(prev_y, new_y, prev_x)
-                        self.create_h_tunnel(prev_x, new_x, new_y)
-
-                #add monsters
-                self.place_objects(new_room)
-
-                #finally append the new rooms to the list
-                rooms.append(new_room)
-                num_rooms += 1
-
-        #create stairs at the center of the last room
-        self.stairs = objects.Object(new_x, new_y, '<', 'stairs', libtcod.white, always_visible=True)
-        self.objects.append(self.stairs)
-        self.stairs.send_to_back(self.objects)
-
+    def create_stairs(self, x, y, upstairs=False):
+        char = '<'
+        name = 'stairs down'
+        if upstairs:
+            char = '>'
+            name = 'stairs up'
+        s = objects.Object(x, y, char, name, libtcod.white, always_visible=True)        
+        self.stairs.append(s)
+        self.objects.append(s)
+        s.send_to_back(self.objects)
+        
     #Place the objects on the map, including monsters and items
     #NOTE: 09/02/13 - This method is being changed for better placement.
-    def place_objects(self, room):
-        # maximum number of monsters per room
-        max_monsters = self.from_dungeon_level([[2, 1], [3, 4], [5, 6]])
-
-        #chance of each monster
-        monster_chances = {}
-        monster_chances['orc'] = 80 #orc always shows up, even if all other monsters have 0 chance
-        monster_chances['troll'] = self.from_dungeon_level([[15, 3], [30, 5], [60, 7]])
-
-        #choose random number of monsters
-        num_monsters = libtcod.random_get_int(0, 0, max_monsters)
-
-        for i in range(num_monsters):
-            #choose random spot for this monster
-            x = libtcod.random_get_int(0, room.x1 + 1, room.x2 - 1)
-            y = libtcod.random_get_int(0, room.y1 + 1, room.y2 - 1)
-            if not self.is_blocked(x, y):
-                choice = self.random_choice(monster_chances)
-                if choice == 'orc':
-                    #create an orc
-                    fighter_component = character_classes.BaseCharacterClass(hp=20, defense=0, power=4)
-                    ai_component = creatures.BasicMonster()
-                    monster = creatures.Creature(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
-                        character_class=fighter_component, ai=ai_component, xp=35, screen=self.screen)
-                elif choice == 'troll':
-                    #create a troll
-                    fighter_component = character_classes.BaseCharacterClass(hp=30, defense=2, power=8)
-                    ai_component = creatures.BasicMonster()
-                    monster = creatures.Creature(x, y, 'T', 'troll', libtcod.darker_green, blocks=True,
-                                     character_class=fighter_component, ai=ai_component, xp=100, screen=self.screen)
-                monster.character_class.player = self.player
-                self.objects.append(monster)
-
-        #maximum number of items per room
-        max_items = self.from_dungeon_level([[1, 1], [2, 4]])
-
-        #chance of each item (by default they have a chance of 0 at level 1, which then goes up)
-        item_chances = {}
-        item_chances['heal'] = 35 #healing potion always shows up, even if all other items have 0 chance
-        item_chances['lightning'] = self.from_dungeon_level([[25, 4]])
-        item_chances['fireball'] = self.from_dungeon_level([[25, 6]])
-        item_chances['confuse'] = self.from_dungeon_level([[10, 2]])
-        item_chances['sword'] = self.from_dungeon_level([[10, 3]])
-
-        num_items = libtcod.random_get_int(0, 0, max_items)
-
-        for i in range(num_items):
-            #choose random spot for this item
-            x = libtcod.random_get_int(0, room.x1 + 1, room.x2 - 1)
-            y = libtcod.random_get_int(0, room.y1 + 1, room.y2 - 1)
-
-            #only place it if the tiles is not blocked
-            if not self.is_blocked(x, y):
-                choice = self.random_choice(item_chances)
-                item = items.Item(x, y, '?','', libtcod.white)
-                if choice == 'heal':
-                    #create a healing potion
-                    item = items.Spell_Scroll(x, y, '!', 'healing potion', libtcod.violet, 'heal')
-                elif choice == 'lightning':
-                    #create a lightning bolt scroll
-                    item = items.Spell_Scroll(x, y, '#', 'scroll of lightning bolt', libtcod.dark_blue, 'lightning')
-                elif choice == 'fireball':
-                    #create a fireball scroll
-                    item = items.Spell_Scroll(x, y, '#', 'scroll of fireball', libtcod.dark_orange, 'fireball')
-                elif choice == 'confuse':
-                    #create a confuse scroll
-                    item = items.Spell_Scroll(x, y, '#', 'scroll of confusion', libtcod.light_blue, 'confusion')
-                elif choice == 'sword':                    #create a sword                    
-                    item = items.Equipment(x, y, '/', 'sword', libtcod.sky, slot='right hand')
-                self.objects.append(item)
-                item.send_to_back(self.objects) # items appear below other objects
+    def place_objects(self, rooms):
+        for room in rooms:
+            # maximum number of monsters per room
+            max_monsters = self.from_dungeon_level([[2, 1], [3, 4], [5, 6]])
+    
+            #chance of each monster
+            monster_chances = {}
+            monster_chances['orc'] = 80 #orc always shows up, even if all other monsters have 0 chance
+            monster_chances['troll'] = self.from_dungeon_level([[15, 3], [30, 5], [60, 7]])
+    
+            #choose random number of monsters
+            num_monsters = libtcod.random_get_int(0, 0, max_monsters)
+    
+            for i in range(num_monsters):
+                #choose random spot for this monster
+                x = libtcod.random_get_int(0, room.x1 + 1, room.x2 - 1)
+                y = libtcod.random_get_int(0, room.y1 + 1, room.y2 - 1)
+                if not self.is_blocked(x, y):
+                    choice = self.random_choice(monster_chances)
+                    if choice == 'orc':
+                        #create an orc
+                        fighter_component = character_classes.BaseCharacterClass(hp=20, defense=0, power=4)
+                        ai_component = creatures.BasicMonster()
+                        monster = creatures.Creature(x, y, 'o', 'orc', libtcod.desaturated_green, blocks=True,
+                            character_class=fighter_component, ai=ai_component, xp=35, screen=self.screen)
+                    elif choice == 'troll':
+                        #create a troll
+                        fighter_component = character_classes.BaseCharacterClass(hp=30, defense=2, power=8)
+                        ai_component = creatures.BasicMonster()
+                        monster = creatures.Creature(x, y, 'T', 'troll', libtcod.darker_green, blocks=True,
+                                         character_class=fighter_component, ai=ai_component, xp=100, screen=self.screen)
+                    monster.player = self.player
+                    self.objects.append(monster)
+    
+            #maximum number of items per room
+            max_items = self.from_dungeon_level([[1, 1], [2, 4]])
+    
+            #chance of each item (by default they have a chance of 0 at level 1, which then goes up)
+            item_chances = {}
+            item_chances['heal'] = 35 #healing potion always shows up, even if all other items have 0 chance
+            item_chances['lightning'] = self.from_dungeon_level([[25, 4]])
+            item_chances['fireball'] = self.from_dungeon_level([[25, 6]])
+            item_chances['confuse'] = self.from_dungeon_level([[10, 2]])
+            item_chances['sword'] = self.from_dungeon_level([[10, 3]])
+    
+            num_items = libtcod.random_get_int(0, 0, max_items)
+    
+            for i in range(num_items):
+                #choose random spot for this item
+                x = libtcod.random_get_int(0, room.x1 + 1, room.x2 - 1)
+                y = libtcod.random_get_int(0, room.y1 + 1, room.y2 - 1)
+    
+                #only place it if the tiles is not blocked
+                if not self.is_blocked(x, y):
+                    choice = self.random_choice(item_chances)
+                    item = items.Item(x, y, '?','', libtcod.white)
+                    if choice == 'heal':
+                        #create a healing potion
+                        item = items.Spell_Scroll(x, y, '!', 'healing potion', libtcod.violet, 'heal')
+                    elif choice == 'lightning':
+                        #create a lightning bolt scroll
+                        item = items.Spell_Scroll(x, y, '#', 'scroll of lightning bolt', libtcod.dark_blue, 'lightning')
+                    elif choice == 'fireball':
+                        #create a fireball scroll
+                        item = items.Spell_Scroll(x, y, '#', 'scroll of fireball', libtcod.dark_orange, 'fireball')
+                    elif choice == 'confuse':
+                        #create a confuse scroll
+                        item = items.Spell_Scroll(x, y, '#', 'scroll of confusion', libtcod.light_blue, 'confusion')
+                    elif choice == 'sword':                    #create a sword                    
+                        item = items.Equipment(x, y, '/', 'sword', libtcod.sky, slot='right hand')
+                    self.objects.append(item)
+                    item.send_to_back(self.objects) # items appear below other objects
 
     #Make the next map level and proceed to it.
     def next_level(self):
@@ -233,9 +274,29 @@ class GameMap:
 
         self.screen.message('After a rare moment of peace, you descend deeper into the hear of the dungeon...', libtcod.red)
         self.dungeon_level += 1
-        self.make() #create a fresh level!
+        self.level_objects[self.dungeon_level] = []
+        self.level_stairs[self.dungeon_level] = []
+        #if the dungeon map hasn't been generated for the next level, generate it.
+        if(self.map is None):
+            self.make() #create a fresh level!
+            self.initialize_fov()        
+    
+    def prev_level(self):
+        #advance to the next level
+        self.screen.message('You take a moment to rest, and recover your strength.', libtcod.light_violet)
+        self.player.heal_self(self.player.character_class.max_hp / 2)
 
-        self.initialize_fov()
+        self.screen.message('After a rare moment of peace, you march upward to the sun...', libtcod.red)
+        self.dungeon_level -= 1
+        
+        stair = [s for s in self.stairs if s.char == '<'][0]
+        self.player.x = stair.x
+        self.player.y = stair.y
+        self.initialize_fov()        
+    
+    def check_stairs_loc(self):
+        return len([s for s in self.stairs if s.x == self.player.x and s.y == self.player.y]) == 1
+         
     #Returns a value that depends on level.  The table specifies what value occurs after each level, default is 0
     def from_dungeon_level(self, table):
         
@@ -311,10 +372,10 @@ class GameMap:
 
     #Updates the monster bindings to point to the player.  Called when the player respawns
     def update_player_bindings(self):
-        for obj in self.objects:
-            if isinstance(obj, creatures.Creature) and obj != self.player and obj.character_class is not None: 
-                obj.player = self.player
-
+        [self.set_player(o) for o in self.objects if isinstance(o, creatures.Creature)]        
+    
+    def set_player(self, object):
+        object.player = self.player
 #################################################################################
 # Rectangle class is used for room creation.
 #################################################################################
@@ -334,8 +395,12 @@ class Rect:
     def intersect(self, other):
         #returns true if this rectangle interests with another one
         return (self.x1 <= other.x2 and self.x2 >= other.x1 and
-                self.y1 <= other.y2 and self.y2 >= other.y2)
-
+                self.y1 <= other.y2 and self.y2 >= other.y1)
+    
+    def __eq__(self, other):
+        return (self.x1 == other.x1 and self.x2 == other.x2 and
+                self.y1 == other.y1 and self.y2 == other.y2)
+        
 #################################################################################
 # A Tile represents a point on the map.
 #################################################################################
